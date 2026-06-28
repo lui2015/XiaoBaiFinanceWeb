@@ -1,0 +1,301 @@
+// Prisma schema —— 与 docs/数据库DDL.sql 对齐（17 张核心表）
+// 字段命名采用 camelCase，并通过 @map 映射到 DDL 风格的 snake_case 列名。
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// =======================
+// 内容
+// =======================
+model Category {
+  id           BigInt    @id @default(autoincrement())
+  parentId     BigInt?   @map("parent_id")
+  name         String    @db.VarChar(40)
+  slug         String    @unique @db.VarChar(60)
+  iconUrl      String?   @map("icon_url") @db.VarChar(255)
+  sortOrder    Int       @default(0) @map("sort_order")
+  status       Int       @default(1) @db.TinyInt // 0 停用 1 启用
+  description  String?   @db.VarChar(255)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  parent       Category? @relation("CategoryTree", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children     Category[] @relation("CategoryTree")
+  articles     Article[]  @relation("CategoryArticles")
+  subArticles  Article[]  @relation("SubCategoryArticles")
+
+  @@index([parentId])
+  @@index([status, sortOrder])
+  @@map("category")
+}
+
+model Article {
+  id              BigInt    @id @default(autoincrement())
+  title           String    @db.VarChar(120)
+  slug            String    @unique @db.VarChar(160)
+  summary         String?   @db.VarChar(255)
+  sourceType      Int       @default(0) @map("source_type") @db.TinyInt // 0 HTML 1 MD 2 在线
+  contentMd       String?   @map("content_md") @db.MediumText
+  contentHtml     String    @map("content_html") @db.MediumText
+  contentText     String    @map("content_text") @db.MediumText
+  coverUrl        String?   @map("cover_url") @db.VarChar(255)
+  categoryId      BigInt    @map("category_id")
+  subCategoryId   BigInt?   @map("sub_category_id")
+  status          Int       @default(0) @db.TinyInt // 0 草稿 1 已发布 2 已下架
+  isRecommend     Boolean   @default(false) @map("is_recommend")
+  viewCount       Int       @default(0) @map("view_count")
+  likeCount       Int       @default(0) @map("like_count")
+  favoriteCount   Int       @default(0) @map("favorite_count")
+  authorAdminId   BigInt?   @map("author_admin_id")
+  publishAt       DateTime? @map("publish_at")
+  scheduledAt     DateTime? @map("scheduled_at") // 定时发布
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  category        Category  @relation("CategoryArticles", fields: [categoryId], references: [id])
+  subCategory     Category? @relation("SubCategoryArticles", fields: [subCategoryId], references: [id])
+  tags            ArticleTag[]
+  favorites       UserFavorite[]
+  likes           UserLike[]
+  histories       UserHistory[]
+  feedbacks       UserFeedback[]
+
+  @@index([status, publishAt])
+  @@index([categoryId, status, publishAt])
+  @@index([subCategoryId])
+  @@index([scheduledAt])
+  @@map("article")
+}
+
+model Tag {
+  id        BigInt   @id @default(autoincrement())
+  name      String   @unique @db.VarChar(40)
+  slug      String   @unique @db.VarChar(60)
+  createdAt DateTime @default(now()) @map("created_at")
+  articles  ArticleTag[]
+  @@map("tag")
+}
+
+model ArticleTag {
+  articleId BigInt @map("article_id")
+  tagId     BigInt @map("tag_id")
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  @@id([articleId, tagId])
+  @@index([tagId])
+  @@map("article_tag")
+}
+
+// =======================
+// 账号
+// =======================
+model AdminUser {
+  id            BigInt    @id @default(autoincrement())
+  username      String    @unique @db.VarChar(40)
+  passwordHash  String    @map("password_hash") @db.VarChar(120)
+  realName      String?   @map("real_name") @db.VarChar(40)
+  role          Int       @default(1) @db.TinyInt // 1 管理员 2 超级管理员
+  status        Int       @default(1) @db.TinyInt
+  failedCount   Int       @default(0) @map("failed_count")
+  lockedUntil   DateTime? @map("locked_until")
+  lastLoginAt   DateTime? @map("last_login_at")
+  lastLoginIp   String?   @map("last_login_ip") @db.VarChar(45)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  @@map("admin_user")
+}
+
+model User {
+  id              BigInt    @id @default(autoincrement())
+  phoneHash       String?   @unique @map("phone_hash") @db.Char(64)
+  phoneCipher     String?   @map("phone_cipher") @db.VarChar(255)
+  phoneMasked     String?   @map("phone_masked") @db.VarChar(20)
+  emailHash       String?   @unique @map("email_hash") @db.Char(64)
+  emailCipher     String?   @map("email_cipher") @db.VarChar(255)
+  emailMasked     String?   @map("email_masked") @db.VarChar(64)
+  passwordHash    String?   @map("password_hash") @db.VarChar(120)
+  nickname        String    @db.VarChar(40)
+  avatarUrl       String?   @map("avatar_url") @db.VarChar(255)
+  status          Int       @default(0) @db.TinyInt // 0 正常 1 封禁 2 注销中 3 已注销
+  cancelAt        DateTime? @map("cancel_at")
+  registeredAt    DateTime  @default(now()) @map("registered_at")
+  lastLoginAt     DateTime? @map("last_login_at")
+  lastLoginIp     String?   @map("last_login_ip") @db.VarChar(45)
+  failedCount     Int       @default(0) @map("failed_count")
+  lockedUntil     DateTime? @map("locked_until")
+  // 第三方登录绑定
+  wechatOpenid    String?   @unique @map("wechat_openid") @db.VarChar(64)
+  wechatUnionid   String?   @map("wechat_unionid") @db.VarChar(64)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  favorites    UserFavorite[]
+  likes        UserLike[]
+  histories    UserHistory[]
+  feedbacks    UserFeedback[]
+  refreshTokens RefreshToken[]
+
+  @@index([status])
+  @@map("user")
+}
+
+model UserFavorite {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  articleId BigInt   @map("article_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  @@unique([userId, articleId])
+  @@index([articleId])
+  @@map("user_favorite")
+}
+
+model UserLike {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  articleId BigInt   @map("article_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  @@unique([userId, articleId])
+  @@index([articleId])
+  @@map("user_like")
+}
+
+model UserHistory {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  articleId BigInt   @map("article_id")
+  viewedAt  DateTime @default(now()) @map("viewed_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  @@unique([userId, articleId])
+  @@index([userId, viewedAt])
+  @@map("user_history")
+}
+
+model UserFeedback {
+  id         BigInt   @id @default(autoincrement())
+  userId     BigInt   @map("user_id")
+  articleId  BigInt   @map("article_id")
+  type       Int      @db.TinyInt // 0 有用 1 没用 2 报错
+  content    String?  @db.VarChar(500)
+  status     Int      @default(0) @db.TinyInt // 0 待处理 1 已采纳 2 已修复 3 已关闭
+  handlerId  BigInt?  @map("handler_id")
+  handledAt  DateTime? @map("handled_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article    Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  @@index([articleId, type])
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("user_feedback")
+}
+
+// =======================
+// 安全 / 审计
+// =======================
+model SmsLog {
+  id        BigInt   @id @default(autoincrement())
+  phoneHash String   @map("phone_hash") @db.Char(64)
+  scene     String   @db.VarChar(20)
+  codeHash  String   @map("code_hash") @db.VarChar(120)
+  ip        String?  @db.VarChar(45)
+  used      Boolean  @default(false)
+  expiredAt DateTime @map("expired_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([phoneHash, createdAt])
+  @@map("sms_log")
+}
+
+model RefreshToken {
+  id         BigInt   @id @default(autoincrement())
+  userId     BigInt   @map("user_id")
+  jti        String   @unique @db.VarChar(64)
+  ua         String?  @db.VarChar(255)
+  ip         String?  @db.VarChar(45)
+  revoked    Boolean  @default(false)
+  expiredAt  DateTime @map("expired_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("refresh_token")
+}
+
+model OperationLog {
+  id         BigInt   @id @default(autoincrement())
+  adminId    BigInt?  @map("admin_id")
+  action     String   @db.VarChar(60)
+  targetType String?  @map("target_type") @db.VarChar(40)
+  targetId   String?  @map("target_id") @db.VarChar(40)
+  payload    Json?
+  ip         String?  @db.VarChar(45)
+  ua         String?  @db.VarChar(255)
+  createdAt  DateTime @default(now()) @map("created_at")
+  @@index([adminId, createdAt])
+  @@map("operation_log")
+}
+
+model SearchLog {
+  id          BigInt   @id @default(autoincrement())
+  keyword     String   @db.VarChar(60)
+  resultCount Int      @default(0) @map("result_count")
+  ip          String?  @db.VarChar(45)
+  ua          String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  @@index([keyword])
+  @@index([createdAt])
+  @@map("search_log")
+}
+
+model ArticleViewLog {
+  id        BigInt   @id @default(autoincrement())
+  articleId BigInt   @map("article_id")
+  userId    BigInt?  @map("user_id")
+  ip        String?  @db.VarChar(45)
+  ua        String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([articleId, createdAt])
+  @@map("article_view_log")
+}
+
+// =======================
+// 运营配置
+// =======================
+model Banner {
+  id         BigInt   @id @default(autoincrement())
+  title      String   @db.VarChar(80)
+  imageUrl   String   @map("image_url") @db.VarChar(255)
+  linkUrl    String?  @map("link_url") @db.VarChar(255)
+  sortOrder  Int      @default(0) @map("sort_order")
+  status     Int      @default(1) @db.TinyInt
+  startAt    DateTime? @map("start_at")
+  endAt      DateTime? @map("end_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  @@map("banner")
+}
+
+model HomeRecommend {
+  id        BigInt @id @default(autoincrement())
+  articleId BigInt @map("article_id")
+  sortOrder Int    @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([articleId])
+  @@map("home_recommend")
+}
+
+model SysConfig {
+  k         String   @id @db.VarChar(60)
+  v         String   @db.Text
+  remark    String?  @db.VarChar(255)
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("sys_config")
+}

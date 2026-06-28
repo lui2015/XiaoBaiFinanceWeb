@@ -1,0 +1,25 @@
+node_modules
+.next
+out
+dist
+.DS_Store
+
+# env files - never commit real secrets
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+uploads
+*.log
+coverage
+.vercel
+
+# IDE / tooling
+.codebuddy/
+.idea/
+.vscode/
+
+# build artifacts
+next-env.d.ts.bak

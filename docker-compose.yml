@@ -1,0 +1,36 @@
+version: '3.9'
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: xb_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: xiaobai_finance
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --innodb-ft-min-token-size=1
+      - --ngram-token-size=2
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: xb_es
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+volumes:
+  mysql_data: {}
+  es_data: {}

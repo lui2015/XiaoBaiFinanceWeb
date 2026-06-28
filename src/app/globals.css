@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --max-w: 1200px;
+}
+
+html, body { height: 100%; }
+body {
+  background: #f7f9fc;
+  color: #1f2937;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 文章正文样式 */
+.article-prose { line-height: 1.85; word-break: break-word; font-size: 16px; color: #1f2937; }
+.article-prose h1 { font-size: 28px; font-weight: 700; margin: 28px 0 16px; }
+.article-prose h2 { font-size: 22px; font-weight: 700; margin: 24px 0 12px; padding-left: 10px; border-left: 4px solid #2c7be5; }
+.article-prose h3 { font-size: 18px; font-weight: 600; margin: 18px 0 10px; }
+.article-prose p { margin: 12px 0; }
+.article-prose a { color: #2c7be5; text-decoration: underline; }
+.article-prose strong { font-weight: 600; }
+.article-prose ul, .article-prose ol { padding-left: 24px; margin: 12px 0; }
+.article-prose ul li { list-style: disc; }
+.article-prose ol li { list-style: decimal; }
+.article-prose blockquote { border-left: 4px solid #d1d5db; padding: 4px 14px; color: #4b5563; background: #f3f4f6; margin: 14px 0; border-radius: 4px; }
+.article-prose code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.92em; }
+.article-prose pre { background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px; overflow-x: auto; }
+.article-prose pre code { background: transparent; color: inherit; padding: 0; }
+.article-prose img { max-width: 100%; border-radius: 6px; margin: 10px 0; }
+.article-prose table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+.article-prose th, .article-prose td { border: 1px solid #e5e7eb; padding: 8px 10px; }
+.article-prose th { background: #f3f4f6; }
+.article-prose mark { background: #fff3a3; padding: 0 2px; }
+
+/* 搜索结果高亮 */
+em.hl, .hl em { background: #fff3a3; font-style: normal; padding: 0 2px; border-radius: 2px; }
+
+/* 滚动条美化 */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+
+/* 移动端工具类 */
+@media (max-width: 640px) {
+  .article-prose { font-size: 15px; }
+  .article-prose h1 { font-size: 22px; }
+  .article-prose h2 { font-size: 18px; }
+}

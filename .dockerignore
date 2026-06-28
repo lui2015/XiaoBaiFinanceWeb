@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.env
+.env.local
+.env.development
+.DS_Store
+npm-debug.log*
+*.log
+README.md
+docs
+需求文档.md
+.vscode
+.idea
+coverage
+uploads
