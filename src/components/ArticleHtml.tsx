@@ -6,12 +6,11 @@ import { useEffect, useRef, useState } from 'react';
  * - 完整保留原文档的 <style>、内联样式与布局，且与站点样式互不干扰。
  * - sandbox 仅授予 allow-scripts / allow-popups（不含 allow-same-origin），
  *   使内容处于「隔离来源」，无法访问站点 Cookie/DOM，脚本已在入库时剔除，形成纵深防御。
- * - 通过内置探针脚本上报内容高度实现自适应（带防抖 & 突变过滤）。
+ * - 通过内置探针脚本上报内容高度实现自适应（仅防抖）。
  */
 export default function ArticleHtml({ html, className }: { html: string; className?: string }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(480);
-  const heightRef = useRef(0); // 0 表示尚未收到首次有效上报
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -19,19 +18,10 @@ export default function ArticleHtml({ html, className }: { html: string; classNa
       if (ref.current && e.source !== ref.current.contentWindow) return;
       const d = e.data;
       if (d && d.type === 'xbf-article-height' && typeof d.height === 'number') {
-        const raw = Math.max(200, Math.ceil(d.height) + 4);
-        // 绝对上界：超过 5 万像素的值视为异常（普通文章不会这么高）
-        if (raw > 50_000) return;
-        // 首次上报直接采纳；后续只允许增长或适度回缩（不低于已确认高度的 60%）
-        const prev = heightRef.current;
-        const next = prev === 0 ? raw : raw < prev * 0.6 ? prev : raw;
-
-        // 100ms 防抖：合并短时间内多次上报，避免滚动时频繁重绘
+        const h = Math.max(200, Math.ceil(d.height) + 4);
+        // 纯防抖：合并短时间多次上报为一次更新
         if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => {
-          heightRef.current = next;
-          setHeight(next);
-        }, 100);
+        timerRef.current = setTimeout(() => setHeight(h), 120);
       }
     }
     window.addEventListener('message', onMsg);
@@ -58,7 +48,7 @@ export default function ArticleHtml({ html, className }: { html: string; classNa
   );
 }
 
-const PROBE = `<script>(function(){var _t=null;function r(){if(_t)return;_t=setTimeout(function(){_t=null;try{parent.postMessage({type:'xbf-article-height',height:Math.max(document.documentElement.scrollHeight,document.body?document.body.scrollHeight:0)},'*')}catch(e){}},120)}window.addEventListener('load',r);window.addEventListener('resize',r);if(window.ResizeObserver){try{new ResizeObserver(r).observe(document.documentElement)}catch(e){}}document.addEventListener('DOMContentLoaded',r);var imgs=document.images||[];for(var i=0;i<imgs.length;i++){imgs[i].addEventListener('load',r);imgs[i].addEventListener('error',r)}window.addEventListener('message',function(e){var d=e.data;if(d&&d.type==='xbf-scroll-to'){var el=document.getElementById(d.id);if(el){el.scrollIntoView({behavior:'smooth',block:'start'})}}});setTimeout(r,200);setTimeout(r,800);setTimeout(r,2000)})();<\/script>`;
+const PROBE = `<script>(function(){function r(){try{parent.postMessage({type:'xbf-article-height',height:Math.max(document.documentElement.scrollHeight,document.body?document.body.scrollHeight:0)},'*')}catch(e){}}window.addEventListener('load',r);window.addEventListener('resize',r);document.addEventListener('DOMContentLoaded',r);var imgs=document.images||[];for(var i=0;i<imgs.length;i++){imgs[i].addEventListener('load',r);imgs[i].addEventListener('error',r)}window.addEventListener('message',function(e){var d=e.data;if(d&&d.type==='xbf-scroll-to'){var el=document.getElementById(d.id);if(el){el.scrollIntoView({behavior:'smooth',block:'start'})}}});setTimeout(r,200);setTimeout(r,800);setTimeout(r,2000)})();<\/script>`;
 
 const BASE_TAG = '<base target="_blank">';
 
