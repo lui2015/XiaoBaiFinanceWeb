@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { apiHandler, ApiErrors, jsonSafe } from '@/lib/api';
 import { requireManager } from '@/lib/auth';
-import { sanitizeHtmlContent, markdownToSanitizedHtml, htmlToText } from '@/lib/sanitize';
+import { sanitizeRichHtml, markdownToSanitizedHtml, htmlToText } from '@/lib/sanitize';
 import { slugify } from '@/lib/utils';
 import { getSearch } from '@/lib/search';
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       html = markdownToSanitizedHtml(body.contentMd);
     } else {
       if (!body.contentHtml) throw ApiErrors.badRequest('contentHtml 必填');
-      html = sanitizeHtmlContent(body.contentHtml);
+      html = sanitizeRichHtml(body.contentHtml);
     }
     const text = htmlToText(html);
     if (!text.trim()) throw ApiErrors.badRequest('内容为空或被全部净化');

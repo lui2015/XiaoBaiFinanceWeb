@@ -58,18 +58,60 @@ export function markdownToSanitizedHtml(md: string): string {
   return sanitizeHtmlContent(rendered);
 }
 
-/** 抽取纯文本（用于搜索索引、摘要） */
+/** 判断是否为完整 HTML 文档（含 <html> 根） */
+function isFullDocument(html: string): boolean {
+  return /<html[\s>]/i.test(html);
+}
+
+/**
+ * 富 HTML 净化：用于「上传/粘贴 HTML」路径。
+ * 目标是「原封不动」保留原始设计（<style>、内联 style、class、语义/布局标签、表格等），
+ * 仅剔除会导致 XSS 的危险内容（<script>、on* 事件、javascript:/vbscript:/data:text/html）。
+ * 渲染侧配合 sandbox iframe 做样式隔离与脚本禁用，二者形成纵深防御。
+ */
+export function sanitizeRichHtml(html: string): string {
+  if (!html) return '';
+  const full = isFullDocument(html);
+  const dom = new JSDOM(full ? html : `<!DOCTYPE html><html><head></head><body>${html}</body></html>`);
+  const doc = dom.window.document;
+
+  // 移除脚本类元素（内容一并丢弃）
+  doc.querySelectorAll('script, noscript, template').forEach((el) => el.remove());
+
+  // 清理危险属性
+  const urlAttrs = new Set(['href', 'src', 'xlink:href', 'action', 'formaction', 'background', 'poster']);
+  doc.querySelectorAll('*').forEach((el) => {
+    Array.from(el.attributes).forEach((attr) => {
+      const name = attr.name.toLowerCase();
+      const val = (attr.value || '').trim().toLowerCase();
+      if (name.startsWith('on')) {
+        el.removeAttribute(attr.name);
+      } else if (urlAttrs.has(name) && (val.startsWith('javascript:') || val.startsWith('vbscript:') || val.startsWith('data:text/html'))) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+
+  if (full) return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+  return doc.body.innerHTML;
+}
+
+/** 抽取纯文本（用于搜索索引、摘要）；剔除 style/script/head 避免 CSS 混入 */
 export function htmlToText(html: string): string {
   if (!html) return '';
-  const dom = new JSDOM(`<body>${html}</body>`);
-  const text = dom.window.document.body.textContent || '';
+  const full = isFullDocument(html);
+  const dom = new JSDOM(full ? html : `<!DOCTYPE html><html><head></head><body>${html}</body></html>`);
+  const doc = dom.window.document;
+  doc.querySelectorAll('script, style, noscript, head, template').forEach((el) => el.remove());
+  const text = (doc.body && doc.body.textContent) || '';
   return text.replace(/\s+/g, ' ').trim();
 }
 
-/** 从 HTML 抽取目录（h2/h3） */
+/** 从 HTML 抽取目录（h2/h3），并为标题注入锚点 id；兼容完整文档与片段 */
 export interface TocItem { id: string; text: string; level: 2 | 3 }
 export function buildToc(html: string): { html: string; toc: TocItem[] } {
-  const dom = new JSDOM(`<body>${html}</body>`);
+  const full = isFullDocument(html);
+  const dom = new JSDOM(full ? html : `<!DOCTYPE html><html><head></head><body>${html}</body></html>`);
   const doc = dom.window.document;
   const toc: TocItem[] = [];
   const headings = doc.querySelectorAll('h2, h3');
@@ -79,5 +121,6 @@ export function buildToc(html: string): { html: string; toc: TocItem[] } {
     h.setAttribute('id', id);
     toc.push({ id, text, level: h.tagName.toLowerCase() === 'h2' ? 2 : 3 });
   });
-  return { html: doc.body.innerHTML, toc };
+  const out = full ? '<!DOCTYPE html>\n' + doc.documentElement.outerHTML : doc.body.innerHTML;
+  return { html: out, toc };
 }

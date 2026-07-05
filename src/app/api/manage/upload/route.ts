@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiHandler, ApiErrors, jsonSafe } from '@/lib/api';
 import { requireManager } from '@/lib/auth';
-import { sanitizeHtmlContent, markdownToSanitizedHtml, htmlToText } from '@/lib/sanitize';
+import { sanitizeRichHtml, markdownToSanitizedHtml, htmlToText } from '@/lib/sanitize';
 
 const ALLOWED = new Set(['text/html', 'text/markdown', 'text/plain', 'application/octet-stream']);
 const MAX_HTML = 2 * 1024 * 1024;
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     if (kind === 'html' && buf.length > MAX_HTML) throw ApiErrors.badRequest('HTML 文件超过 2MB');
     if (kind === 'md' && buf.length > MAX_MD) throw ApiErrors.badRequest('Markdown 文件超过 1MB');
     const raw = buf.toString('utf8');
-    const cleaned = kind === 'md' ? markdownToSanitizedHtml(raw) : sanitizeHtmlContent(raw);
+    const cleaned = kind === 'md' ? markdownToSanitizedHtml(raw) : sanitizeRichHtml(raw);
     const text = htmlToText(cleaned);
     const suspectStripped = /<script|on\w+=|javascript:/i.test(raw) && !/<script|on\w+=|javascript:/i.test(cleaned);
     return jsonSafe({

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, apiUrl } from '@/lib/http';
 import { toast } from '@/components/Toaster';
+import ArticleHtml from '@/components/ArticleHtml';
 
 interface Cat {
   id: string;
@@ -136,7 +137,13 @@ export default function ArticleEditClient({ categories: cats, article }: { categ
         {contentHtml && (
           <details className="mt-4">
             <summary className="text-sm cursor-pointer font-semibold text-ink/70">预览渲染</summary>
-            <div className="article-prose mt-3 border-2 border-ink/10 rounded-xl p-4" dangerouslySetInnerHTML={{ __html: contentHtml }} />
+            {srcTab === 0 ? (
+              <div className="mt-3 border-2 border-ink/10 rounded-xl overflow-hidden">
+                <ArticleHtml html={contentHtml} />
+              </div>
+            ) : (
+              <div className="article-prose mt-3 border-2 border-ink/10 rounded-xl p-4" dangerouslySetInnerHTML={{ __html: contentHtml }} />
+            )}
           </details>
         )}
       </div>

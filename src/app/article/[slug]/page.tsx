@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { buildToc } from '@/lib/sanitize';
 import ArticleClient from './ArticleClient';
+import ArticleToc from './ArticleToc';
+import ArticleHtml from '@/components/ArticleHtml';
 import LoginPromptModal from '@/components/LoginPromptModal';
 import { getCurrentUser } from '@/lib/auth';
 
@@ -28,6 +30,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
   });
   if (!a) notFound();
   const { html, toc } = buildToc(a.contentHtml);
+  const isHtmlSource = a.sourceType === 0;
   const [related, prevArt, nextArt, user] = await Promise.all([
     prisma.article.findMany({
       where: { categoryId: a.categoryId, status: 1, deletedAt: null, NOT: { id: a.id } },
@@ -83,7 +86,13 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           isLogin={!!user}
           isManager={!!user && user.isAdmin}
         >
-          <div className="article-prose bg-white rounded-lg p-5 sm:p-8 border border-gray-100" dangerouslySetInnerHTML={{ __html: html }} />
+          {isHtmlSource ? (
+            <div className="bg-white rounded-lg overflow-hidden border border-gray-100">
+              <ArticleHtml html={html} />
+            </div>
+          ) : (
+            <div className="article-prose bg-white rounded-lg p-5 sm:p-8 border border-gray-100" dangerouslySetInnerHTML={{ __html: html }} />
+          )}
         </ArticleClient>
 
         {/* 上下篇 */}
@@ -122,7 +131,9 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         <div className="sticky top-20">
           <div className="bg-white rounded-lg p-4 border border-gray-100">
             <h3 className="font-semibold mb-2 text-sm">目录</h3>
-            {toc.length === 0 ? (
+            {isHtmlSource ? (
+              <ArticleToc items={toc} />
+            ) : toc.length === 0 ? (
               <div className="text-xs text-gray-400">无小节</div>
             ) : (
               <ul className="text-sm space-y-1">
