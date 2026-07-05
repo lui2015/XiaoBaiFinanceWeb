@@ -48,9 +48,14 @@ export default function ArticleHtml({ html, className }: { html: string; classNa
   );
 }
 
-const PROBE = `<script>(function(){function r(){try{parent.postMessage({type:'xbf-article-height',height:Math.max(document.documentElement.scrollHeight,document.body?document.body.scrollHeight:0)},'*')}catch(e){}}window.addEventListener('load',r);window.addEventListener('resize',r);document.addEventListener('DOMContentLoaded',r);var imgs=document.images||[];for(var i=0;i<imgs.length;i++){imgs[i].addEventListener('load',r);imgs[i].addEventListener('error',r)}window.addEventListener('message',function(e){var d=e.data;if(d&&d.type==='xbf-scroll-to'){var el=document.getElementById(d.id);if(el){el.scrollIntoView({behavior:'smooth',block:'start'})}}});setTimeout(r,200);setTimeout(r,800);setTimeout(r,2000)})();<\/script>`;
+const PROBE = `<script>(function(){var _t=null;function m(){var de=document.documentElement,b=document.body;return Math.max(de?de.scrollHeight:0,de?de.offsetHeight:0,b?b.scrollHeight:0,b?b.offsetHeight:0)}function r(){if(_t)return;_t=setTimeout(function(){_t=null;try{parent.postMessage({type:'xbf-article-height',height:m()},'*')}catch(e){}},80)}window.addEventListener('load',r);window.addEventListener('resize',r);if(window.ResizeObserver){try{new ResizeObserver(r).observe(document.body||document.documentElement)}catch(e){}}document.addEventListener('DOMContentLoaded',r);var imgs=document.images||[];for(var i=0;i<imgs.length;i++){imgs[i].addEventListener('load',r);imgs[i].addEventListener('error',r)}window.addEventListener('message',function(e){var d=e.data;if(d&&d.type==='xbf-scroll-to'){var el=document.getElementById(d.id);if(el){el.scrollIntoView({behavior:'smooth',block:'start'})}}});setTimeout(r,300);setTimeout(r,1000);setTimeout(r,2500)})();<\/script>`;
 
 const BASE_TAG = '<base target="_blank">';
+
+// 关键：中和内容里 html/body 的 height/min-height（如 min-height:100vh）。
+// 在 iframe 中 100vh = iframe 自身高度，会与探针上报的高度耦合成循环，
+// 导致高度不稳定（越滚越大 / 展示不全）。解耦后 body 高度纯由内容决定。
+const HEIGHT_RESET = `<style>html,body{height:auto!important;min-height:0!important}</style>`;
 
 const FRAGMENT_STYLE = `<style>html,body{margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;color:#1f2937;line-height:1.85;font-size:16px;padding:4px;word-break:break-word}img{max-width:100%;height:auto}table{border-collapse:collapse;max-width:100%}</style>`;
 
@@ -65,6 +70,12 @@ function buildSrcDoc(inner: string): string {
     } else if (/<html[^>]*>/i.test(out)) {
       out = out.replace(/<html([^>]*)>/i, `<html$1><head>${BASE_TAG}</head>`);
     }
+    // 注入高度解耦样式：放在 </head> 前，确保覆盖内容自带的 min-height:100vh 等
+    if (/<\/head>/i.test(out)) {
+      out = out.replace(/<\/head>/i, `${HEIGHT_RESET}</head>`);
+    } else if (/<body[^>]*>/i.test(out)) {
+      out = out.replace(/(<body[^>]*>)/i, `${HEIGHT_RESET}$1`);
+    }
     // 注入探针脚本到 body 末尾
     if (/<\/body>/i.test(out)) {
       out = out.replace(/<\/body>/i, `${PROBE}</body>`);
@@ -73,5 +84,5 @@ function buildSrcDoc(inner: string): string {
     }
     return out;
   }
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${BASE_TAG}${FRAGMENT_STYLE}</head><body>${inner}${PROBE}</body></html>`;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${BASE_TAG}${FRAGMENT_STYLE}${HEIGHT_RESET}</head><body>${inner}${PROBE}</body></html>`;
 }
