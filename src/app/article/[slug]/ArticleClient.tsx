@@ -1,41 +1,22 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Heart, Bookmark, MessageSquare, ArrowUp, Pencil, Trash2 } from 'lucide-react';
+import { Heart, Bookmark, MessageSquare, ArrowUp } from 'lucide-react';
 import { requireLogin } from '@/components/LoginPromptModal';
 import { toast } from '@/components/Toaster';
 import { apiFetch } from '@/lib/http';
 
 export default function ArticleClient({
-  articleId, initialLiked, initialFavorited, isLogin, isManager = false, children,
+  articleId, initialLiked, initialFavorited, isLogin, children,
 }: {
   articleId: string;
   initialLiked: boolean;
   initialFavorited: boolean;
   isLogin: boolean;
-  isManager?: boolean;
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const [liked, setLiked] = useState(initialLiked);
   const [favorited, setFavorited] = useState(initialFavorited);
   const [showFeedback, setShowFeedback] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
-  async function removeArticle() {
-    if (!window.confirm('确定删除这篇文章吗？删除后将从前台下线，且无法在此页恢复。')) return;
-    setDeleting(true);
-    const r = await apiFetch(`/api/manage/articles/${articleId}`, { method: 'DELETE' });
-    setDeleting(false);
-    if (r.ok) {
-      toast('文章已删除', 'success');
-      router.push('/');
-      router.refresh();
-    } else {
-      const data = await r.json().catch(() => ({}));
-      toast(data.message || '删除失败', 'error');
-    }
-  }
 
   // 阅读量上报
   useEffect(() => {
@@ -67,24 +48,6 @@ export default function ArticleClient({
 
   return (
     <>
-      {/* 管理员操作区 */}
-      {isManager && (
-        <div className="flex items-center gap-2 mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-          <span className="mr-auto text-xs font-medium text-amber-600">管理员操作</span>
-          <button
-            onClick={() => router.push(`/me/manage/edit/${articleId}`)}
-            className="flex items-center gap-1 rounded-full border border-amber-300 bg-white px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-100">
-            <Pencil size={14} /> 编辑
-          </button>
-          <button
-            onClick={removeArticle}
-            disabled={deleting}
-            className="flex items-center gap-1 rounded-full border border-rose-300 bg-white px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50 disabled:opacity-50">
-            <Trash2 size={14} /> {deleting ? '删除中…' : '删除'}
-          </button>
-        </div>
-      )}
-
       {children}
       {/* 操作区 */}
       <div className="flex justify-center gap-3 my-6">

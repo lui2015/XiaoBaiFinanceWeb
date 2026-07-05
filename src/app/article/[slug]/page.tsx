@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Pencil } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { buildToc } from '@/lib/sanitize';
 import ArticleClient from './ArticleClient';
@@ -70,7 +71,19 @@ export default async function ArticlePage({ params }: { params: { slug: string }
             </>
           )}
         </nav>
-        <h1 className="text-2xl sm:text-3xl font-bold mb-3 leading-snug">{a.title}</h1>
+        <div className="flex items-start gap-2 mb-3">
+          <h1 className="text-2xl sm:text-3xl font-bold leading-snug">{a.title}</h1>
+          {user?.isAdmin && (
+            <Link
+              href={`/me/manage/edit/${a.id}`}
+              aria-label="编辑文章"
+              title="编辑文章"
+              className="mt-1 shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-brand-50 hover:text-brand-500"
+            >
+              <Pencil size={18} />
+            </Link>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-4">
           <span>{a.publishAt ? new Date(a.publishAt).toLocaleString('zh-CN') : ''}</span>
           <span>· 阅读 {a.viewCount}</span>
@@ -83,7 +96,6 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           initialLiked={liked}
           initialFavorited={favorited}
           isLogin={!!user}
-          isManager={!!user && user.isAdmin}
         >
           {isHtmlSource ? (
             <div className="bg-white rounded-lg overflow-hidden border border-gray-100">

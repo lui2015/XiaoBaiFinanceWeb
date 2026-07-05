@@ -1,6 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Trash2 } from 'lucide-react';
 import { apiFetch, apiUrl } from '@/lib/http';
 import { toast } from '@/components/Toaster';
 import ArticleHtml from '@/components/ArticleHtml';
@@ -43,8 +44,24 @@ export default function ArticleEditClient({ categories: cats, article }: { categ
   const [contentMd, setContentMd] = useState(article.contentMd || '');
   const [parseInfo, setParseInfo] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const subs = useMemo(() => (categoryId ? subsOf(categoryId) : []), [categoryId, cats]);
+
+  async function removeArticle() {
+    if (!window.confirm('确定删除这篇文章吗？删除后将从前台下线。')) return;
+    setDeleting(true);
+    const r = await apiFetch(`/api/manage/articles/${article.id}`, { method: 'DELETE' });
+    setDeleting(false);
+    if (r.ok) {
+      toast('文章已删除', 'success');
+      router.push('/');
+      router.refresh();
+    } else {
+      const data = await r.json().catch(() => ({}));
+      toast(data.message || '删除失败', 'error');
+    }
+  }
 
   async function uploadFile(file: File, kind: 'html' | 'md') {
     const fd = new FormData();
@@ -181,6 +198,17 @@ export default function ArticleEditClient({ categories: cats, article }: { categ
         <div className="bg-white border-2 border-ink rounded-2xl p-4 shadow-comic-sm space-y-2">
           <button disabled={saving} onClick={() => save(0)} className="comic-btn bg-white text-ink w-full disabled:opacity-50">保存草稿</button>
           <button disabled={saving} onClick={() => save(1)} className="comic-btn bg-sunny text-ink w-full disabled:opacity-50">保存并发布</button>
+        </div>
+
+        <div className="bg-white border-2 border-rose-200 rounded-2xl p-4 shadow-comic-sm">
+          <div className="text-xs font-semibold text-rose-500 mb-2">危险操作</div>
+          <button
+            disabled={deleting}
+            onClick={removeArticle}
+            className="flex w-full items-center justify-center gap-1 rounded-full border-2 border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+          >
+            <Trash2 size={14} /> {deleting ? '删除中…' : '删除文章'}
+          </button>
         </div>
       </aside>
     </div>
