@@ -5,18 +5,63 @@
 :root {
   color-scheme: light;
   --max-w: 1200px;
-  --ink: #1f1a2e;
+
+  /* === 配色变量（RGB 三元组，供 Tailwind rgb(var / alpha) 使用）=== */
+  --brand-50: 238 247 255;
+  --brand-100: 217 236 255;
+  --brand-500: 44 123 229;
+  --brand-600: 31 99 196;
+  --brand-700: 26 83 163;
+  --ink: 31 26 46;
+  --sunny: 255 207 51;
+  --coral: 255 107 107;
+  --mint: 34 201 147;
+  --sky: 56 189 248;
+  --grape: 139 92 246;
+  --cream: 255 249 240;
+  --comic-shadow: 31 26 46;
+
+  /* 页面底 & 卡片面 & 网点 */
+  --page-bg: #fff9f0;
+  --page-dot: rgba(31, 26, 46, 0.06);
+  --surface: #ffffff;
+  --text-body: #1f1a2e;
+}
+
+/* === 赛博朋克暗色模式 === */
+.dark {
+  color-scheme: dark;
+
+  --brand-50: 8 47 73;
+  --brand-100: 12 74 110;
+  --brand-500: 34 211 238;   /* 霓虹青，链接/主色 */
+  --brand-600: 34 211 238;
+  --brand-700: 103 232 249;
+  --ink: 224 231 255;         /* 文本/描边：冷白 */
+  --sunny: 250 204 21;        /* 霓虹黄 */
+  --coral: 255 45 149;        /* 霓虹品红 */
+  --mint: 45 255 196;         /* 霓虹绿 */
+  --sky: 34 211 238;          /* 霓虹青 */
+  --grape: 167 139 250;       /* 霓虹紫 */
+  --cream: 18 14 38;          /* 面板深底（header/footer）*/
+  --comic-shadow: 34 211 238; /* 硬阴影→霓虹青 */
+
+  --page-bg: #07060f;
+  --page-dot: rgba(34, 211, 238, 0.10);
+  --surface: #12102a;
+  --text-body: #e0e7ff;
 }
 
 html, body { height: 100%; }
 body {
-  /* 漫画风：暖奶油底 + 半透明网点 */
-  background-color: #fff9f0;
-  background-image: radial-gradient(rgba(31, 26, 46, 0.06) 1.2px, transparent 1.2px);
+  /* 漫画风：底色 + 半透明网点（跟随主题变量）*/
+  background-color: var(--page-bg);
+  background-image: radial-gradient(var(--page-dot) 1.2px, transparent 1.2px);
   background-size: 20px 20px;
-  color: #1f1a2e;
+  color: var(--text-body);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  transition: background-color .35s ease, color .35s ease;
 }
 
 /* 漫画风可复用组件类 */
@@ -87,3 +132,58 @@ em.hl, .hl em { background: #fff3a3; font-style: normal; padding: 0 2px; border-
   .article-prose h1 { font-size: 22px; }
   .article-prose h2 { font-size: 18px; }
 }
+
+/* ============================================================
+   赛博朋克暗色模式覆盖
+   ============================================================ */
+/* 卡片/输入等白色面 → 深色面 */
+.dark .bg-white { background-color: var(--surface); }
+
+/* 亮色霓虹背景（黄/绿/青）上的文字在暗色下保持深色，保证对比度 */
+.dark .bg-sunny,
+.dark .bg-mint,
+.dark .bg-sky,
+.dark .comic-chip-active { color: #0b0a1c; }
+
+/* 平滑过渡（切换主题时不生硬）*/
+header, footer, .comic-card, .comic-chip, .comic-btn, .comic-badge, input {
+  transition: background-color .35s ease, border-color .35s ease, box-shadow .25s ease, color .35s ease;
+}
+
+/* 卡片：霓虹描边 + 外发光 */
+.dark .comic-card {
+  border-color: rgb(var(--sky));
+  box-shadow: 3px 3px 0 0 rgb(var(--comic-shadow)), 0 0 14px -2px rgb(var(--sky) / 0.55);
+}
+.dark .comic-card-hover:hover {
+  box-shadow: 6px 6px 0 0 rgb(var(--comic-shadow)), 0 0 22px -1px rgb(var(--sky) / 0.75);
+}
+/* 分类彩色胶囊/标签的外发光（用自身背景色近似）*/
+.dark .comic-badge { box-shadow: 2px 2px 0 0 rgb(var(--comic-shadow)), 0 0 10px -2px rgb(var(--sky) / 0.5); }
+.dark .comic-btn:hover { box-shadow: 3px 3px 0 0 rgb(var(--comic-shadow)), 0 0 16px -2px rgb(var(--sky) / 0.6); }
+
+/* 头部/底部：底/顶霓虹描边 */
+.dark header { border-color: rgb(var(--sky) / 0.6); box-shadow: 0 2px 16px -6px rgb(var(--sky) / 0.5); }
+.dark footer { border-color: rgb(var(--sky) / 0.6); }
+
+/* 站点标题/分区标题：轻微霓虹辉光 */
+.dark .comic-title { text-shadow: 0 0 10px rgb(var(--sky) / 0.45); }
+
+/* 暗色滚动条 */
+.dark ::-webkit-scrollbar-thumb { background: rgb(var(--sky) / 0.35); }
+
+/* 暗色下的文章正文（about/policy 等非 iframe 文本）*/
+.dark .article-prose { color: #cdd3f0; }
+.dark .article-prose h1,
+.dark .article-prose h2,
+.dark .article-prose h3 { color: #e6e9ff; }
+.dark .article-prose h2 { border-left-color: rgb(var(--sky)); }
+.dark .article-prose a { color: rgb(var(--sky)); }
+.dark .article-prose blockquote { border-left-color: rgb(var(--grape)); color: #b9c0e0; background: rgba(167,139,250,0.10); }
+.dark .article-prose code { background: rgba(34,211,238,0.12); color: #a7f3f8; }
+.dark .article-prose pre { background: #0b0a1c; color: #d6e0ff; }
+.dark .article-prose table th,
+.dark .article-prose table td { border-color: rgba(148,163,184,0.25); }
+.dark .article-prose table th { background: rgba(34,211,238,0.10); }
+.dark .article-prose mark,
+.dark em.hl, .dark .hl em { background: rgb(var(--sunny) / 0.35); color: inherit; }

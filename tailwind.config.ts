@@ -2,24 +2,26 @@ import type { Config } from 'tailwindcss';
 
 const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
+        // 全部走 CSS 变量，暗色模式（.dark）下切换为赛博朋克配色
         brand: {
-          50: '#eef7ff',
-          100: '#d9ecff',
-          500: '#2c7be5',
-          600: '#1f63c4',
-          700: '#1a53a3',
+          50: 'rgb(var(--brand-50) / <alpha-value>)',
+          100: 'rgb(var(--brand-100) / <alpha-value>)',
+          500: 'rgb(var(--brand-500) / <alpha-value>)',
+          600: 'rgb(var(--brand-600) / <alpha-value>)',
+          700: 'rgb(var(--brand-700) / <alpha-value>)',
         },
         // 漫画风活力配色
-        ink: '#1f1a2e',
-        sunny: '#ffcf33',
-        coral: '#ff6b6b',
-        mint: '#22c993',
-        sky: '#38bdf8',
-        grape: '#8b5cf6',
-        cream: '#fff9f0',
+        ink: 'rgb(var(--ink) / <alpha-value>)',
+        sunny: 'rgb(var(--sunny) / <alpha-value>)',
+        coral: 'rgb(var(--coral) / <alpha-value>)',
+        mint: 'rgb(var(--mint) / <alpha-value>)',
+        sky: 'rgb(var(--sky) / <alpha-value>)',
+        grape: 'rgb(var(--grape) / <alpha-value>)',
+        cream: 'rgb(var(--cream) / <alpha-value>)',
       },
       fontFamily: {
         sans: [
@@ -33,11 +35,11 @@ const config: Config = {
         '3xl': '1.75rem',
       },
       boxShadow: {
-        // 漫画硬阴影（solid offset）
-        comic: '3px 3px 0 0 #1f1a2e',
-        'comic-md': '4px 4px 0 0 #1f1a2e',
-        'comic-lg': '6px 6px 0 0 #1f1a2e',
-        'comic-sm': '2px 2px 0 0 #1f1a2e',
+        // 漫画硬阴影（solid offset）；颜色走变量，暗色下变为霓虹
+        comic: '3px 3px 0 0 rgb(var(--comic-shadow))',
+        'comic-md': '4px 4px 0 0 rgb(var(--comic-shadow))',
+        'comic-lg': '6px 6px 0 0 rgb(var(--comic-shadow))',
+        'comic-sm': '2px 2px 0 0 rgb(var(--comic-shadow))',
       },
       keyframes: {
         pop: {

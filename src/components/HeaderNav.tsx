@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Menu, X, Search } from 'lucide-react';
 import { toast } from '@/components/Toaster';
 import { apiFetch } from '@/lib/http';
+import ThemeToggle from '@/components/ThemeToggle';
 
 interface Cat { id: string; name: string; slug: string }
 interface UserLite { id: string; nickname: string; avatarUrl: string | null; isAdmin: boolean }
@@ -90,10 +91,12 @@ export default function HeaderNav({ categories, user }: { categories: Cat[]; use
         ) : (
           <Link href="/login" className="comic-btn bg-sunny text-ink text-sm">登录 / 注册</Link>
         )}
+        <ThemeToggle />
       </div>
 
       {/* 移动端按钮 */}
       <div className="md:hidden ml-auto flex items-center gap-3">
+        <ThemeToggle />
         <button aria-label="搜索" onClick={() => setMobileOpen(true)}><Search size={20} /></button>
         <button aria-label="菜单" onClick={() => setMobileOpen(true)}><Menu size={22} /></button>
       </div>
