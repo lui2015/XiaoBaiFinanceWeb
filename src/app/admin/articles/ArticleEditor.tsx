@@ -1,6 +1,42 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/http';
+
+function FileDrop({ accept, exts, hint, onFile }: {
+  accept: string; exts: string[]; hint: string; onFile: (f: File) => void;
+}) {
+  const [drag, setDrag] = useState(false);
+  const [name, setName] = useState('');
+  const [tip, setTip] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function handle(f?: File | null) {
+    if (!f) return;
+    const ok = exts.some((e) => f.name.toLowerCase().endsWith(e));
+    if (!ok) { setTip(`仅支持 ${exts.join(' / ')} 文件`); return; }
+    setTip(''); setName(f.name); onFile(f);
+  }
+
+  return (
+    <div
+      onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+      onDragLeave={(e) => { e.preventDefault(); setDrag(false); }}
+      onDrop={(e) => { e.preventDefault(); setDrag(false); handle(e.dataTransfer.files?.[0]); }}
+      onClick={() => inputRef.current?.click()}
+      className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${drag ? 'border-brand-500 bg-brand-50' : 'border-gray-300 hover:border-brand-400 bg-gray-50'}`}
+    >
+      <input ref={inputRef} type="file" accept={accept} className="hidden"
+        onChange={(e) => { handle(e.target.files?.[0]); e.target.value = ''; }} />
+      <div className="text-sm text-gray-600">
+        {name
+          ? <span className="text-brand-600 font-medium break-all">{name}</span>
+          : <>将文件拖到此处，或<span className="text-brand-500">点击选择</span></>}
+      </div>
+      <div className="text-[11px] text-gray-400 mt-1">{tip || hint}</div>
+    </div>
+  );
+}
 
 interface Cat { id: string; name: string; children?: Cat[] }
 interface Initial {
@@ -39,7 +75,7 @@ export default function ArticleEditor({
     const fd = new FormData();
     fd.append('file', file);
     fd.append('kind', kind);
-    const r = await fetch('/api/admin/articles/parse', { method: 'POST', body: fd });
+    const r = await apiFetch('/api/admin/articles/parse', { method: 'POST', body: fd });
     const data = await r.json();
     if (!r.ok) return setErr(data.message || '解析失败');
     setErr('');
@@ -51,7 +87,7 @@ export default function ArticleEditor({
   async function uploadCover(file: File) {
     const fd = new FormData();
     fd.append('file', file);
-    const r = await fetch('/api/admin/upload/cover', { method: 'POST', body: fd });
+    const r = await apiFetch('/api/admin/upload/cover', { method: 'POST', body: fd });
     const data = await r.json();
     if (r.ok) update('coverUrl', data.data.url);
     else setErr(data.message || '上传失败');
@@ -77,7 +113,7 @@ export default function ArticleEditor({
 
     const url = mode === 'create' ? '/api/admin/articles' : `/api/admin/articles/${v.id}`;
     const method = mode === 'create' ? 'POST' : 'PUT';
-    const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const r = await apiFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     setSaving(false);
     const data = await r.json();
     if (!r.ok) return setErr(data.message || '保存失败');
@@ -108,7 +144,8 @@ export default function ArticleEditor({
 
         {tab === 0 && (
           <div>
-            <input type="file" accept=".html" onChange={(e) => e.target.files && uploadFile(e.target.files[0], 'html')} />
+            <FileDrop accept=".html,.htm" exts={['.html', '.htm']} hint="支持 .html / .htm 文件，上传后自动净化"
+              onFile={(f) => uploadFile(f, 'html')} />
             {parseInfo && <div className="text-xs text-gray-500 mt-2">{parseInfo}</div>}
             <textarea
               value={v.contentHtml} onChange={(e) => update('contentHtml', e.target.value)}
@@ -118,7 +155,8 @@ export default function ArticleEditor({
         )}
         {tab === 1 && (
           <div>
-            <input type="file" accept=".md,.markdown,.txt" onChange={(e) => e.target.files && uploadFile(e.target.files[0], 'md')} />
+            <FileDrop accept=".md,.markdown,.txt" exts={['.md', '.markdown', '.txt']} hint="支持 .md / .markdown / .txt 文件"
+              onFile={(f) => uploadFile(f, 'md')} />
             {parseInfo && <div className="text-xs text-gray-500 mt-2">{parseInfo}</div>}
             <textarea
               value={v.contentMd} onChange={(e) => update('contentMd', e.target.value)}

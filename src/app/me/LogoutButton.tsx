@@ -1,11 +1,12 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/components/Toaster';
+import { apiFetch } from '@/lib/http';
 
 export default function LogoutButton() {
   const router = useRouter();
   async function logout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await apiFetch('/api/auth/logout', { method: 'POST' });
     toast('已退出登录', 'success');
     router.push('/');
     router.refresh();

@@ -12,6 +12,10 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio",
+    "db:start": "bash scripts/db-local.sh start",
+    "db:stop": "bash scripts/db-local.sh stop",
+    "db:status": "bash scripts/db-local.sh status",
+    "db:restart": "bash scripts/db-local.sh restart",
     "es:sync": "tsx scripts/es-sync.ts",
     "scheduler": "tsx scripts/scheduler.ts"
   },

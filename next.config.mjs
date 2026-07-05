@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
+const basePath = '/XiaoBaiFinance';
 const nextConfig = {
+  basePath,
+  // 注入到客户端，供 fetch 拼接前缀（basePath 不会自动作用于 fetch）
+  env: { NEXT_PUBLIC_BASE_PATH: basePath },
   reactStrictMode: true,
   poweredByHeader: false,
   // 生产构建跳过严格类型/ESLint 检查（BigInt 等少量类型告警暂不阻塞部署，开发环境仍会报错）

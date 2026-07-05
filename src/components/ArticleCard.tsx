@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { Eye, Heart } from 'lucide-react';
+import { apiUrl } from '@/lib/http';
 
 export interface ArticleCardItem {
   id: string;
@@ -12,29 +14,51 @@ export interface ArticleCardItem {
   category?: { id: string; name: string; slug: string };
 }
 
+// 分类彩色标签：按名称稳定映射到活力配色
+const CHIP_COLORS = ['bg-sunny', 'bg-mint', 'bg-sky', 'bg-coral', 'bg-grape'];
+function chipColor(key: string) {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 997;
+  return CHIP_COLORS[h % CHIP_COLORS.length];
+}
+
 export default function ArticleCard({ a }: { a: ArticleCardItem }) {
   const date = a.publishAt ? new Date(a.publishAt).toLocaleDateString('zh-CN') : '';
+  const catColor = a.category ? chipColor(a.category.name) : 'bg-sunny';
+
   return (
     <Link
       href={`/article/${a.slug}`}
-      className="group block bg-white rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-100"
+      className="comic-card comic-card-hover group block overflow-hidden"
     >
-      <div className="flex gap-4">
-        {a.coverUrl && (
+      {a.coverUrl && (
+        <div className="relative border-b-2 border-ink overflow-hidden">
           <img
-            src={a.coverUrl}
+            src={apiUrl(a.coverUrl)}
             alt=""
-            className="w-24 h-24 sm:w-32 sm:h-24 rounded object-cover flex-shrink-0"
+            className="w-full h-44 sm:h-52 object-cover group-hover:scale-105 transition-transform duration-300"
           />
+          {a.category && (
+            <span className={`absolute top-3 left-3 comic-badge ${catColor} text-ink`}>
+              {a.category.name}
+            </span>
+          )}
+        </div>
+      )}
+      <div className="p-4">
+        {!a.coverUrl && a.category && (
+          <span className={`comic-badge ${catColor} text-ink mb-2`}>{a.category.name}</span>
         )}
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-base sm:text-lg group-hover:text-brand-500 line-clamp-2">{a.title}</h3>
-          <p className="text-sm text-gray-500 mt-1 line-clamp-2">{a.summary}</p>
-          <div className="flex items-center gap-3 text-xs text-gray-400 mt-2">
-            {a.category && <span className="text-brand-500">{a.category.name}</span>}
-            <span>{date}</span>
-            <span>{a.viewCount} 阅读</span>
-          </div>
+        <h3 className="font-black text-lg leading-snug text-ink group-hover:text-brand-600 line-clamp-2">
+          {a.title}
+        </h3>
+        {a.summary && (
+          <p className="text-sm text-ink/55 mt-2 line-clamp-2 leading-relaxed">{a.summary}</p>
+        )}
+        <div className="flex items-center gap-4 text-xs text-ink/45 mt-3 font-semibold">
+          <span className="inline-flex items-center gap-1"><Eye size={14} />{a.viewCount}</span>
+          <span className="inline-flex items-center gap-1"><Heart size={14} />{a.likeCount}</span>
+          {date && <span className="ml-auto">{date}</span>}
         </div>
       </div>
     </Link>

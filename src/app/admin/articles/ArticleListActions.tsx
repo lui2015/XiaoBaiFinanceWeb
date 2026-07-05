@@ -1,11 +1,12 @@
 'use client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/http';
 
 export default function ArticleListActions({ id, status, slug }: { id: string; status: number; slug: string }) {
   const router = useRouter();
   async function setStatus(s: number) {
-    const r = await fetch(`/api/admin/articles/${id}/status`, {
+    const r = await apiFetch(`/api/admin/articles/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: s }),
@@ -14,7 +15,7 @@ export default function ArticleListActions({ id, status, slug }: { id: string; s
   }
   async function del() {
     if (!confirm('确认删除？')) return;
-    const r = await fetch(`/api/admin/articles/${id}`, { method: 'DELETE' });
+    const r = await apiFetch(`/api/admin/articles/${id}`, { method: 'DELETE' });
     if (r.ok) router.refresh();
   }
   return (

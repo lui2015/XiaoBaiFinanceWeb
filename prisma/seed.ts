@@ -4,13 +4,37 @@
  */
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { sanitizeHtmlContent, htmlToText } from '../src/lib/sanitize';
 
 const prisma = new PrismaClient();
+
+// 轻量自洽实现，避免 seed 依赖 ../src（精简生产镜像不含 src 源码）。
+// seed 内容均为可信硬编码，此处做基础净化即可。
+function sanitizeHtmlContent(html: string): string {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
+    .replace(/javascript:/gi, '');
+}
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 async function ensureAdmin() {
   const username = process.env.SEED_SUPER_ADMIN_USERNAME || 'admin';
   const password = process.env.SEED_SUPER_ADMIN_PASSWORD || 'Admin@12345';
+  // 若该 username 已存在，则不覆盖，避免误改已登录管理员密码
   const exists = await prisma.adminUser.findUnique({ where: { username } });
   if (exists) return;
   await prisma.adminUser.create({
@@ -22,6 +46,18 @@ async function ensureAdmin() {
     },
   });
   console.log(`[seed] admin created: ${username} / ${password}`);
+}
+
+async function ensureAccountUser() {
+  const username = process.env.SEED_ACCOUNT_USERNAME || 'luli';
+  const password = process.env.SEED_ACCOUNT_PASSWORD || 'luli116574';
+  const passwordHash = await bcrypt.hash(password, 10);
+  await prisma.user.upsert({
+    where: { username },
+    update: { passwordHash, status: 0, isAdmin: true },
+    create: { username, passwordHash, nickname: username, status: 0, isAdmin: true },
+  });
+  console.log(`[seed] account user ready: ${username} / ${password}`);
 }
 
 const CATEGORIES: Array<{ name: string; slug: string; sort: number; children?: { name: string; slug: string }[] }> = [
@@ -142,6 +178,7 @@ async function ensureSysConfig() {
 
 async function main() {
   await ensureAdmin();
+  await ensureAccountUser();
   await ensureCategories();
   await ensureArticles();
   await ensureSysConfig();

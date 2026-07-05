@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from '@/components/Toaster';
+import { apiFetch, apiUrl } from '@/lib/http';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,13 +17,13 @@ export default function LoginPage() {
   const [counting, setCounting] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
-  // Email
-  const [email, setEmail] = useState('');
+  // 账号密码
+  const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
 
   async function sendCode() {
     if (!/^1[3-9]\d{9}$/.test(phone)) return toast('请输入正确的手机号', 'error');
-    const r = await fetch('/api/auth/sms/send', {
+    const r = await apiFetch('/api/auth/sms/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, scene: 'login' }),
@@ -42,7 +43,7 @@ export default function LoginPage() {
   async function loginSms() {
     if (!agree) return toast('请先勾选同意协议', 'error');
     setSubmitting(true);
-    const r = await fetch('/api/auth/login/sms', {
+    const r = await apiFetch('/api/auth/login/sms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, code, agreement: true }),
@@ -55,7 +56,7 @@ export default function LoginPage() {
     try {
       const local = JSON.parse(localStorage.getItem('xb_history') || '[]') as { id: string; at: number }[];
       if (local.length) {
-        await fetch('/api/u/history', {
+        await apiFetch('/api/u/history', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ items: local.slice(0, 50).map(x => ({ articleId: x.id, viewedAt: x.at })) }),
@@ -66,12 +67,14 @@ export default function LoginPage() {
     router.refresh();
   }
 
-  async function loginEmail() {
+  async function loginAccount() {
+    if (!account.trim()) return toast('请输入账号', 'error');
+    if (!password) return toast('请输入密码', 'error');
     setSubmitting(true);
-    const r = await fetch('/api/auth/login/password', {
+    const r = await apiFetch('/api/auth/login/password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ account: account.trim(), password }),
     });
     setSubmitting(false);
     const data = await r.json();
@@ -87,7 +90,7 @@ export default function LoginPage() {
         <h1 className="text-2xl font-bold mb-1">欢迎回来</h1>
         <p className="text-sm text-gray-500 mb-5">登录后可使用收藏、点赞、反馈等功能</p>
         <div className="flex gap-3 mb-4 border-b border-gray-100">
-          {([['sms','手机号'], ['password','邮箱密码']] as const).map(([k, l]) => (
+          {([['sms','手机号'], ['password','账号密码']] as const).map(([k, l]) => (
             <button key={k}
               onClick={() => setTab(k as 'sms' | 'password')}
               className={`pb-2 text-sm ${tab === k ? 'border-b-2 border-brand-500 text-brand-500' : 'text-gray-500'}`}>{l}</button>
@@ -122,11 +125,11 @@ export default function LoginPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="邮箱地址"
+            <input value={account} onChange={(e) => setAccount(e.target.value)} placeholder="账号"
               className="border border-gray-200 rounded px-3 py-2.5 outline-none focus:border-brand-500" />
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="密码（≥ 8 位，含字母数字）"
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="密码"
               className="border border-gray-200 rounded px-3 py-2.5 outline-none focus:border-brand-500" />
-            <button disabled={submitting} onClick={loginEmail}
+            <button disabled={submitting} onClick={loginAccount}
               className="bg-brand-500 hover:bg-brand-600 text-white py-2.5 rounded disabled:opacity-50">
               登录
             </button>
@@ -134,7 +137,7 @@ export default function LoginPage() {
         )}
 
         <div className="mt-5 text-center">
-          <a href="/api/auth/oauth/wechat" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-brand-500">
+          <a href={apiUrl('/api/auth/oauth/wechat')} className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-brand-500">
             微信扫码登录
           </a>
         </div>

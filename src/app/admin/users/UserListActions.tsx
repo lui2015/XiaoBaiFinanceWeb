@@ -1,11 +1,12 @@
 'use client';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/http';
 
 export default function UserListActions({ id, status }: { id: string; status: number }) {
   const router = useRouter();
   async function setStatus(s: 0 | 1) {
     if (!confirm(s === 1 ? '确认封禁？' : '确认解封？')) return;
-    const r = await fetch(`/api/admin/users/${id}/status`, {
+    const r = await apiFetch(`/api/admin/users/${id}/status`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: s }),
     });

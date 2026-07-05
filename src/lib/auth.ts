@@ -35,8 +35,8 @@ export async function setAdminSession(adminId: bigint, role: number) {
   const { token: rt, expiresAt: _ea } = await signRefresh(sub, 'admin');
   void _ea;
   const c = cookies();
-  c.set(COOKIE_ADMIN_AT, at, { httpOnly: true, secure: isProd(), sameSite: 'lax', path: '/admin', maxAge: TOKEN_TTL.access });
-  c.set(COOKIE_ADMIN_RT, rt, { httpOnly: true, secure: isProd(), sameSite: 'lax', path: '/admin', maxAge: TOKEN_TTL.refresh });
+  c.set(COOKIE_ADMIN_AT, at, { httpOnly: true, secure: isProd(), sameSite: 'lax', path: '/', maxAge: TOKEN_TTL.access });
+  c.set(COOKIE_ADMIN_RT, rt, { httpOnly: true, secure: isProd(), sameSite: 'lax', path: '/', maxAge: TOKEN_TTL.refresh });
   return { at, rt };
 }
 
@@ -74,7 +74,12 @@ export async function getCurrentUser() {
         const u = await prisma.user.findUnique({ where: { id: BigInt(p.sub) } });
         if (u && u.status === 0) {
           const newAt = await signAccess({ sub: p.sub, sid: 'user', nick: u.nickname });
-          c.set(COOKIE_USER_AT, newAt, { httpOnly: true, secure: isProd(), sameSite: 'lax', path: '/', maxAge: TOKEN_TTL.access });
+          // 在服务端组件渲染阶段无法修改 Cookie，此时忽略「顺带刷新」，不影响返回用户
+          try {
+            c.set(COOKIE_USER_AT, newAt, { httpOnly: true, secure: isProd(), sameSite: 'lax', path: '/', maxAge: TOKEN_TTL.access });
+          } catch {
+            // ignore: cookies can only be modified in a Server Action or Route Handler
+          }
           return u;
         }
       }
@@ -86,6 +91,14 @@ export async function getCurrentUser() {
 export async function requireUser() {
   const u = await getCurrentUser();
   if (!u) throw ApiErrors.unauthorized();
+  return u;
+}
+
+/** 前台管理员：已登录用户 且 isAdmin=true，否则 401/403 */
+export async function requireManager() {
+  const u = await getCurrentUser();
+  if (!u) throw ApiErrors.unauthorized();
+  if (!u.isAdmin) throw ApiErrors.forbidden();
   return u;
 }
 

@@ -72,6 +72,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           initialLiked={liked}
           initialFavorited={favorited}
           isLogin={!!user}
+          isManager={!!user && user.isAdmin}
         >
           <div className="article-prose bg-white rounded-lg p-5 sm:p-8 border border-gray-100" dangerouslySetInnerHTML={{ __html: html }} />
         </ArticleClient>

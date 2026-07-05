@@ -120,9 +120,11 @@ model User {
   emailCipher     String?   @map("email_cipher") @db.VarChar(255)
   emailMasked     String?   @map("email_masked") @db.VarChar(64)
   passwordHash    String?   @map("password_hash") @db.VarChar(120)
+  username        String?   @unique @db.VarChar(40) // 账号（用于账号密码登录）
   nickname        String    @db.VarChar(40)
   avatarUrl       String?   @map("avatar_url") @db.VarChar(255)
   status          Int       @default(0) @db.TinyInt // 0 正常 1 封禁 2 注销中 3 已注销
+  isAdmin         Boolean   @default(false) @map("is_admin") // 前台管理员（可进入 /me/manage）
   cancelAt        DateTime? @map("cancel_at")
   registeredAt    DateTime  @default(now()) @map("registered_at")
   lastLoginAt     DateTime? @map("last_login_at")

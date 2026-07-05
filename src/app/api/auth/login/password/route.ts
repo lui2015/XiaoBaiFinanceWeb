@@ -3,22 +3,20 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { apiHandler, ApiError, ErrorCode, jsonSafe } from '@/lib/api';
-import { Reg, getClientIp, getUA } from '@/lib/utils';
-import { piiHash } from '@/lib/crypto';
+import { getClientIp, getUA } from '@/lib/utils';
 import { setUserSession } from '@/lib/auth';
 
 const schema = z.object({
-  email: z.string().regex(Reg.email),
-  password: z.string().min(8).max(64),
+  account: z.string().trim().min(1).max(40),
+  password: z.string().min(6).max(64),
 });
 
 export async function POST(req: NextRequest) {
   return apiHandler(async () => {
     const body = await req.json().catch(() => ({}));
-    const { email, password } = schema.parse(body);
-    const emailHash = piiHash(email.toLowerCase());
+    const { account, password } = schema.parse(body);
 
-    const user = await prisma.user.findUnique({ where: { emailHash } });
+    const user = await prisma.user.findUnique({ where: { username: account } });
     if (!user || !user.passwordHash) throw new ApiError(ErrorCode.ACCOUNT_NOT_EXIST, '账号或密码错误', 401);
     if (user.status === 1) throw new ApiError(ErrorCode.ACCOUNT_BANNED, '账号已被封禁', 403);
     if (user.lockedUntil && user.lockedUntil > new Date()) throw new ApiError(ErrorCode.ACCOUNT_LOCKED, '账号已被临时锁定', 423);

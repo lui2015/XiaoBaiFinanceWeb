@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/http';
 
 interface Sub { id: string; name: string; slug: string; status: number; sortOrder: number }
 interface Top extends Sub { children: Sub[] }
@@ -14,7 +15,7 @@ export default function CategoryClient({ initial }: { initial: Top[] }) {
 
   async function create() {
     if (!name || !slug) return alert('name/slug 必填');
-    const r = await fetch('/api/admin/categories', {
+    const r = await apiFetch('/api/admin/categories', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, slug, parentId: parentId || null }),
     });
@@ -22,7 +23,7 @@ export default function CategoryClient({ initial }: { initial: Top[] }) {
     else alert((await r.json()).message);
   }
   async function patch(id: string, data: any) {
-    const r = await fetch(`/api/admin/categories/${id}`, {
+    const r = await apiFetch(`/api/admin/categories/${id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
@@ -31,7 +32,7 @@ export default function CategoryClient({ initial }: { initial: Top[] }) {
   }
   async function del(id: string) {
     if (!confirm('确认删除？')) return;
-    const r = await fetch(`/api/admin/categories/${id}`, { method: 'DELETE' });
+    const r = await apiFetch(`/api/admin/categories/${id}`, { method: 'DELETE' });
     if (r.ok) router.refresh();
     else alert((await r.json()).message);
   }

@@ -1,10 +1,11 @@
 'use client';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/http';
 
 export default function FeedbackActions({ id, status }: { id: string; status: number }) {
   const router = useRouter();
   async function setStatus(s: 0 | 1 | 2 | 3) {
-    const r = await fetch(`/api/admin/feedbacks/${id}`, {
+    const r = await apiFetch(`/api/admin/feedbacks/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: s }),
     });

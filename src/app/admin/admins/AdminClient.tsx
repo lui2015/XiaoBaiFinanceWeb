@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/http';
 
 interface Item { id: string; username: string; role: number; status: number; realName: string | null; lastLoginAt: string | null; lastLoginIp: string | null }
 
@@ -8,7 +9,7 @@ export default function AdminClient({ list }: { list: Item[] }) {
   const router = useRouter();
   const [u, setU] = useState(''); const [p, setP] = useState(''); const [role, setRole] = useState<1 | 2>(1);
   async function create() {
-    const r = await fetch('/api/admin/admins', {
+    const r = await apiFetch('/api/admin/admins', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: u, password: p, role }),
     });

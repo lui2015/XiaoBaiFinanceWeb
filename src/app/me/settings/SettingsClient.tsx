@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/components/Toaster';
+import { apiFetch } from '@/lib/http';
 
 export default function SettingsClient({ user }: { user: { id: string; nickname: string; avatarUrl: string | null; phoneMasked: string | null; emailMasked: string | null } }) {
   const router = useRouter();
@@ -11,7 +12,7 @@ export default function SettingsClient({ user }: { user: { id: string; nickname:
 
   async function save() {
     setSaving(true);
-    const r = await fetch('/api/u/profile', {
+    const r = await apiFetch('/api/u/profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nickname, avatarUrl: avatarUrl || undefined }),
@@ -25,7 +26,7 @@ export default function SettingsClient({ user }: { user: { id: string; nickname:
 
   async function cancelAccount() {
     if (!confirm('确认申请注销账号？将在 7 天后清理个人信息。')) return;
-    const r = await fetch('/api/u/account/cancel', { method: 'POST' });
+    const r = await apiFetch('/api/u/account/cancel', { method: 'POST' });
     if (r.ok) {
       toast('已提交注销申请', 'success');
       router.push('/');
