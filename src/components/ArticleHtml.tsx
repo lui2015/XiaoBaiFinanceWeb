@@ -11,8 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 export default function ArticleHtml({ html, className }: { html: string; className?: string }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(480);
-  const heightRef = useRef(480);
-  // 防抖 timer
+  const heightRef = useRef(0); // 0 表示尚未收到首次有效上报
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -21,13 +20,13 @@ export default function ArticleHtml({ html, className }: { html: string; classNa
       const d = e.data;
       if (d && d.type === 'xbf-article-height' && typeof d.height === 'number') {
         const raw = Math.max(200, Math.ceil(d.height) + 4);
-        // 突变过滤：不允许单次跳变超过当前高度的 3 倍或增加超过 2000px
+        // 绝对上界：超过 5 万像素的值视为异常（普通文章不会这么高）
+        if (raw > 50_000) return;
+        // 首次上报直接采纳；后续只允许增长或适度回缩（不低于已确认高度的 60%）
         const prev = heightRef.current;
-        if (raw > prev * 3 || raw > prev + 2000) return;
-        // 只允许适度回缩（不低于当前的 50%），防止异常缩小后内容被截断
-        const next = raw < prev * 0.5 ? prev : raw;
+        const next = prev === 0 ? raw : raw < prev * 0.6 ? prev : raw;
 
-        // 100ms 防抖：合并短时间内多次上报
+        // 100ms 防抖：合并短时间内多次上报，避免滚动时频繁重绘
         if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(() => {
           heightRef.current = next;
