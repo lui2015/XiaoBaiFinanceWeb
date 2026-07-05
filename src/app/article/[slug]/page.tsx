@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { buildToc } from '@/lib/sanitize';
 import ArticleClient from './ArticleClient';
-import ArticleToc from './ArticleToc';
 import ArticleHtml from '@/components/ArticleHtml';
 import LoginPromptModal from '@/components/LoginPromptModal';
 import { getCurrentUser } from '@/lib/auth';
@@ -29,7 +28,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
     },
   });
   if (!a) notFound();
-  const { html, toc } = buildToc(a.contentHtml);
+  const { html } = buildToc(a.contentHtml);
   const isHtmlSource = a.sourceType === 0;
   const [related, prevArt, nextArt, user] = await Promise.all([
     prisma.article.findMany({
@@ -58,7 +57,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
   }
 
   return (
-    <div className="mx-auto max-w-[1200px] px-4 py-6 grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-8">
+    <div className="mx-auto max-w-[1000px] px-4 py-6">
       <article>
         <nav className="text-xs sm:text-sm text-gray-500 mb-3">
           <Link href="/" className="hover:text-brand-500">首页</Link>
@@ -125,28 +124,6 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           </section>
         )}
       </article>
-
-      {/* 桌面右侧目录 */}
-      <aside className="hidden lg:block">
-        <div className="sticky top-20">
-          <div className="bg-white rounded-lg p-4 border border-gray-100">
-            <h3 className="font-semibold mb-2 text-sm">目录</h3>
-            {isHtmlSource ? (
-              <ArticleToc items={toc} />
-            ) : toc.length === 0 ? (
-              <div className="text-xs text-gray-400">无小节</div>
-            ) : (
-              <ul className="text-sm space-y-1">
-                {toc.map(t => (
-                  <li key={t.id} style={{ paddingLeft: t.level === 3 ? 12 : 0 }}>
-                    <a href={`#${t.id}`} className="text-gray-600 hover:text-brand-500 line-clamp-1">{t.text}</a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      </aside>
 
       <LoginPromptModal />
     </div>
