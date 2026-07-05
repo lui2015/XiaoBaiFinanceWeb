@@ -5,14 +5,23 @@ import ArticleCard, { type ArticleCardItem } from '@/components/ArticleCard';
 
 export const dynamic = 'force-dynamic';
 
+function decodeSlug(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 export default async function CategoryPage({
   params, searchParams,
 }: {
   params: { slug: string };
   searchParams: { sub?: string; page?: string; sort?: string };
 }) {
+  const slug = decodeSlug(params.slug);
   const cat = await prisma.category.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     include: { children: { where: { status: 1 }, orderBy: { sortOrder: 'asc' } } },
   });
   if (!cat || cat.status !== 1) notFound();
@@ -23,7 +32,7 @@ export default async function CategoryPage({
 
   const where: any = { status: 1, deletedAt: null, categoryId: cat.id };
   if (searchParams.sub) {
-    const sub = await prisma.category.findUnique({ where: { slug: searchParams.sub } });
+    const sub = await prisma.category.findUnique({ where: { slug: decodeSlug(searchParams.sub) } });
     if (sub && sub.parentId === cat.id) where.subCategoryId = sub.id;
   }
   const [list, total] = await Promise.all([

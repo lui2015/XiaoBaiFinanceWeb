@@ -8,9 +8,18 @@ import { getCurrentUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
+function decodeSlug(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 export default async function ArticlePage({ params }: { params: { slug: string } }) {
+  const slug = decodeSlug(params.slug);
   const a = await prisma.article.findFirst({
-    where: { slug: params.slug, deletedAt: null, status: 1 },
+    where: { slug, deletedAt: null, status: 1 },
     include: {
       category: { select: { id: true, name: true, slug: true } },
       subCategory: { select: { id: true, name: true, slug: true } },
