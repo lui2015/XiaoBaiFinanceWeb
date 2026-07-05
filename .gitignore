@@ -24,3 +24,4 @@ coverage
 # build artifacts
 next-env.d.ts.bak
 .localdb/
+tsconfig.tsbuildinfo
