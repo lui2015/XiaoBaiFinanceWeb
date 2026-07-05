@@ -55,8 +55,8 @@ export default function HeaderNav({ categories, user }: { categories: Cat[]; use
           </Link>
         ))}
       </nav>
-      <form onSubmit={submitSearch} className="hidden md:flex items-center bg-white border-2 border-ink rounded-full px-3 py-1.5 w-60 shrink-0 shadow-comic-sm focus-within:shadow-comic transition-shadow">
-        <Search size={16} className="text-ink/50" />
+      <form onSubmit={submitSearch} className="search-box hidden md:flex items-center bg-white border-2 border-ink rounded-full px-3 py-1.5 w-60 shrink-0 shadow-comic-sm focus-within:shadow-comic transition-shadow">
+        <Search size={16} className="search-icon text-ink/50" />
         <input
           value={kw}
           onChange={(e) => setKw(e.target.value)}

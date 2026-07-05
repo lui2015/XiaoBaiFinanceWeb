@@ -187,3 +187,109 @@ header, footer, .comic-card, .comic-chip, .comic-btn, .comic-badge, input {
 .dark .article-prose table th { background: rgba(34,211,238,0.10); }
 .dark .article-prose mark,
 .dark em.hl, .dark .hl em { background: rgb(var(--sunny) / 0.35); color: inherit; }
+
+/* ============================================================
+   赛博朋克导航栏（仅暗色模式）
+   ============================================================ */
+.dark .site-header {
+  background: linear-gradient(180deg, rgba(11, 9, 30, 0.90) 0%, rgba(7, 6, 15, 0.86) 100%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  border-bottom-color: transparent;
+  box-shadow: 0 1px 0 0 rgb(var(--sky) / 0.35), 0 10px 34px -14px rgb(var(--sky) / 0.5);
+  position: sticky;
+}
+/* 底部流动霓虹扫描线 */
+.dark .site-header::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -2px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgb(var(--sky)) 20%, rgb(var(--coral)) 50%, rgb(var(--grape)) 80%, transparent);
+  background-size: 200% 100%;
+  filter: drop-shadow(0 0 6px rgb(var(--sky) / 0.8));
+  animation: hdr-scan 7s linear infinite;
+  pointer-events: none;
+}
+@keyframes hdr-scan {
+  0% { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Logo 方块：霓虹青发光 */
+.dark .logo-badge {
+  background: radial-gradient(circle at 30% 25%, rgba(34, 211, 238, 0.30), rgba(18, 14, 38, 0.95));
+  border-color: rgb(var(--sky));
+  color: rgb(var(--sky));
+  box-shadow: 0 0 0 1px rgb(var(--sky) / 0.35), 0 0 16px -2px rgb(var(--sky) / 0.85), inset 0 0 10px -3px rgb(var(--sky) / 0.7);
+  text-shadow: 0 0 10px rgb(var(--sky) / 0.9);
+}
+/* 站名：青→品红霓虹渐变文字 */
+.dark .logo-text {
+  background: linear-gradient(90deg, rgb(var(--sky)), rgb(var(--coral)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0 0 8px rgb(var(--sky) / 0.45));
+}
+.dark .logo-slogan { color: rgb(var(--grape)); opacity: 0.85; }
+
+/* 导航链接 hover：霓虹辉光 */
+.dark .site-header nav a:hover {
+  color: rgb(var(--sky));
+  text-shadow: 0 0 8px rgb(var(--sky) / 0.75);
+  background-color: rgb(var(--sky) / 0.08) !important;
+}
+
+/* 搜索框：霓虹描边 + 内发光 */
+.dark .search-box {
+  background: rgba(16, 12, 36, 0.72) !important;
+  border-color: rgb(var(--sky) / 0.55);
+  box-shadow: inset 0 0 12px -4px rgb(var(--sky) / 0.55), 0 0 10px -3px rgb(var(--sky) / 0.4);
+}
+.dark .search-box:focus-within {
+  border-color: rgb(var(--sky));
+  box-shadow: inset 0 0 14px -3px rgb(var(--sky) / 0.75), 0 0 18px -2px rgb(var(--sky) / 0.7);
+}
+.dark .search-box input { color: var(--text-body); }
+.dark .search-box input::placeholder { color: rgb(var(--sky) / 0.55); }
+.dark .search-icon { color: rgb(var(--sky) / 0.8) !important; }
+
+/* 登录/注册：青→紫霓虹渐变发光按钮 */
+.dark .login-cta {
+  background: linear-gradient(95deg, rgb(var(--sky)), rgb(var(--grape))) !important;
+  border-color: rgb(var(--sky)) !important;
+  color: #050510 !important;
+  box-shadow: 0 0 14px -2px rgb(var(--sky) / 0.7), 2px 2px 0 0 rgb(var(--comic-shadow));
+  text-shadow: none;
+}
+.dark .login-cta:hover {
+  box-shadow: 0 0 22px 0 rgb(var(--sky) / 0.9), 3px 3px 0 0 rgb(var(--comic-shadow));
+}
+
+/* 主题切换按钮（暗色显示太阳）：霓虹黄描边 */
+.dark .site-header button[aria-label*="模式"] {
+  background: rgba(16, 12, 36, 0.7);
+  border-color: rgb(var(--sunny));
+  color: rgb(var(--sunny));
+  box-shadow: 0 0 12px -2px rgb(var(--sunny) / 0.7);
+}
+
+/* 用户名/图标区、移动端图标按钮：冷白 + 霓虹 hover */
+.dark .site-header .md\:hidden button { color: var(--text-body); }
+.dark .site-header .md\:hidden button:hover { color: rgb(var(--sky)); }
+
+/* 移动端抽屉：霓虹左描边 */
+.dark .site-header .fixed > div {
+  border-left-color: rgb(var(--sky) / 0.6);
+  box-shadow: -8px 0 30px -10px rgb(var(--sky) / 0.5);
+}
+
+/* 桌面下拉分类菜单 & 用户菜单：深底霓虹描边 */
+.dark .site-header nav .bg-white,
+.dark .site-header .relative .bg-white {
+  background-color: #12102a !important;
+  border-color: rgb(var(--sky) / 0.55) !important;
+  box-shadow: 0 0 18px -4px rgb(var(--sky) / 0.55), 4px 4px 0 0 rgb(var(--comic-shadow)) !important;
+}
