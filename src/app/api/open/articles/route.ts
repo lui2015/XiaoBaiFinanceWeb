@@ -2,11 +2,11 @@
  * 对外开放投稿接口
  * POST /api/open/articles
  *
- * 鉴权：API Key（Authorization: Bearer <key> 或 X-API-Key: <key>）。
- * 安全策略：
+ * 鉴权：无需鉴权（公开接口，任何人可调用）。
+ * 安全策略（无鉴权，故防滥用全靠以下几道）：
  *  - 内容强制净化（防 XSS）；
- *  - 投稿一律落库为「草稿 / 待审核」（status=0），不允许对外直接发布，防滥用；
- *  - 按 key + IP 双维度限流；
+ *  - 投稿一律落库为「草稿 / 待审核」（status=0），不允许对外直接发布，必须人工审核；
+ *  - 按来源 IP 限流（较严格）；
  *  - 分类必须存在且启用；
  *  - slug 冲突自动追加随机后缀，避免因重名报错。
  */
@@ -15,7 +15,6 @@ import { z } from 'zod';
 import crypto from 'node:crypto';
 import { prisma } from '@/lib/prisma';
 import { apiHandler, ApiErrors, jsonSafe } from '@/lib/api';
-import { requireApiKey } from '@/lib/open-auth';
 import { sanitizeHtmlContent, markdownToSanitizedHtml, htmlToText } from '@/lib/sanitize';
 import { slugify, getClientIp, getUA, Reg } from '@/lib/utils';
 import { fixedWindow } from '@/lib/rate-limit';
@@ -33,8 +32,8 @@ const submitSchema = z
     categoryId: z.string().regex(/^\d+$/).optional(),
     categorySlug: z.string().max(60).optional(),
     subCategoryId: z.string().regex(/^\d+$/).optional(),
-    // 0 = HTML，1 = Markdown
-    sourceType: z.union([z.literal(0), z.literal(1)]).default(1),
+    // 0 = HTML（默认），1 = Markdown
+    sourceType: z.union([z.literal(0), z.literal(1)]).default(0),
     contentHtml: z.string().max(200_000).optional(),
     contentMd: z.string().max(200_000).optional(),
     // 标签名称（非 id），最多 5 个，服务端自动创建
@@ -60,15 +59,11 @@ async function ensureUniqueSlug(base: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   return apiHandler(async () => {
-    const { keyRef } = requireApiKey(req);
     const ip = getClientIp(req);
 
-    // 限流：单 key 每分钟 30 次；同一 IP 每分钟 60 次
-    if (!fixedWindow(`open:submit:key:${keyRef}`, 30, 60)) {
-      throw ApiErrors.tooMany('投稿过于频繁，请稍后再试');
-    }
-    if (!fixedWindow(`open:submit:ip:${ip}`, 60, 60)) {
-      throw ApiErrors.tooMany('请求过于频繁，请稍后再试');
+    // 无鉴权公开接口：仅按来源 IP 限流（较严格），配合强制草稿待审，降低匿名滥用风险
+    if (!fixedWindow(`open:submit:ip:${ip}`, 20, 60)) {
+      throw ApiErrors.tooMany('提交过于频繁，请稍后再试');
     }
 
     const body = submitSchema.parse(await req.json().catch(() => ({})));
@@ -149,7 +144,7 @@ export async function POST(req: NextRequest) {
         action: 'open.article.submit',
         targetType: 'article',
         targetId: String(article.id),
-        payload: { keyRef, title: body.title },
+        payload: { source: 'open-api', title: body.title },
         ip,
         ua: getUA(req),
       },
