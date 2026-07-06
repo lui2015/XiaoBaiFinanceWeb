@@ -3,9 +3,9 @@
  * POST /api/open/articles
  *
  * 鉴权：无需鉴权（公开接口，任何人可调用）。
- * 安全策略（无鉴权，故防滥用全靠以下几道）：
+ * 行为：投稿内容经安全净化后「直接发布」（status=1），无需人工审核即对外可见。
+ * 安全策略（无鉴权 + 直接发布，故防滥用全靠以下几道）：
  *  - 内容强制净化（防 XSS）；
- *  - 投稿一律落库为「草稿 / 待审核」（status=0），不允许对外直接发布，必须人工审核；
  *  - 按来源 IP 限流（较严格）；
  *  - 分类必须存在且启用；
  *  - slug 冲突自动追加随机后缀，避免因重名报错。
@@ -18,6 +18,7 @@ import { apiHandler, ApiErrors, jsonSafe } from '@/lib/api';
 import { sanitizeHtmlContent, markdownToSanitizedHtml, htmlToText } from '@/lib/sanitize';
 import { slugify, getClientIp, getUA, Reg } from '@/lib/utils';
 import { fixedWindow } from '@/lib/rate-limit';
+import { getSearch } from '@/lib/search';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
   return apiHandler(async () => {
     const ip = getClientIp(req);
 
-    // 无鉴权公开接口：仅按来源 IP 限流（较严格），配合强制草稿待审，降低匿名滥用风险
+    // 无鉴权公开接口：仅按来源 IP 限流（较严格），配合内容净化降低匿名滥用风险
     if (!fixedWindow(`open:submit:ip:${ip}`, 20, 60)) {
       throw ApiErrors.tooMany('提交过于频繁，请稍后再试');
     }
@@ -114,7 +115,8 @@ export async function POST(req: NextRequest) {
         categoryId,
         subCategoryId,
         coverUrl: body.coverUrl,
-        status: 0, // 对外投稿一律为草稿，待管理员审核后发布
+        status: 1, // 对外投稿直接发布
+        publishAt: new Date(),
         isRecommend: false,
         authorAdminId: null,
       },
@@ -144,17 +146,24 @@ export async function POST(req: NextRequest) {
         action: 'open.article.submit',
         targetType: 'article',
         targetId: String(article.id),
-        payload: { source: 'open-api', title: body.title },
+        payload: { source: 'open-api', title: body.title, published: true },
         ip,
         ua: getUA(req),
       },
     });
 
+    // 已发布：同步搜索索引（失败不阻断发布）
+    try {
+      await getSearch().upsertArticle(article.id);
+    } catch {
+      /* 搜索索引失败不影响文章发布 */
+    }
+
     return jsonSafe({
       id: String(article.id),
       slug: article.slug,
-      status: article.status, // 0 = 待审核
-      message: '投稿已提交，等待管理员审核后发布',
+      status: article.status, // 1 = 已发布
+      message: '投稿已发布',
     });
   });
 }
