@@ -8,6 +8,9 @@ import { Reg, parsePage, slugify, getClientIp } from '@/lib/utils';
 import { writeOpLog } from '@/lib/op-log';
 import { getSearch } from '@/lib/search';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   return apiHandler(async () => {
     await requireAdmin();

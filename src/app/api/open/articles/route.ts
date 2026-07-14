@@ -15,7 +15,7 @@ import { z } from 'zod';
 import crypto from 'node:crypto';
 import { prisma } from '@/lib/prisma';
 import { apiHandler, ApiErrors, jsonSafe } from '@/lib/api';
-import { sanitizeHtmlContent, markdownToSanitizedHtml, htmlToText } from '@/lib/sanitize';
+import { sanitizeRichHtml, markdownToSanitizedHtml, htmlToText } from '@/lib/sanitize';
 import { slugify, getClientIp, getUA, Reg } from '@/lib/utils';
 import { fixedWindow } from '@/lib/rate-limit';
 import { getSearch } from '@/lib/search';
@@ -95,7 +95,11 @@ export async function POST(req: NextRequest) {
       html = markdownToSanitizedHtml(body.contentMd);
     } else {
       if (!body.contentHtml) throw ApiErrors.badRequest('contentHtml 必填');
-      html = sanitizeHtmlContent(body.contentHtml);
+      // 与前台「我的-管理」上传路径一致：使用 sanitizeRichHtml「原样保留」原始 HTML
+      // 格式（<style>/内联 style/class/布局标签/表格等），仅剔除 XSS 危险内容
+      // （<script>、on* 事件、javascript:/vbscript:/data:text/html）。
+      // 渲染侧对 sourceType=0 用 sandbox iframe（无 allow-same-origin）隔离，形成纵深防御。
+      html = sanitizeRichHtml(body.contentHtml);
     }
     const text = htmlToText(html);
     if (!text.trim()) throw ApiErrors.badRequest('正文内容为空或被安全过滤');

@@ -8,6 +8,9 @@ import { writeOpLog } from '@/lib/op-log';
 import { getClientIp } from '@/lib/utils';
 import { getSearch } from '@/lib/search';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const updateSchema = z.object({
   title: z.string().min(2).max(60).optional(),
   summary: z.string().max(120).optional(),

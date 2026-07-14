@@ -4,6 +4,9 @@ import { apiHandler, jsonSafe } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { parsePage } from '@/lib/utils';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   return apiHandler(async () => {
     await requireAdmin(2);

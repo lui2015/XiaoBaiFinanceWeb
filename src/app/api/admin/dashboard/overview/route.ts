@@ -2,6 +2,9 @@ import { prisma } from '@/lib/prisma';
 import { apiHandler, jsonSafe } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   return apiHandler(async () => {
     await requireAdmin();
