@@ -23,14 +23,13 @@ interface NewKey {
 }
 
 const CATEGORIES = [
-  ['market', '行情'],
-  ['stock', '股票'],
-  ['fund', '基金'],
-  ['macro', '宏观'],
-  ['policy', '政策'],
-  ['strategy', '策略'],
-  ['global', '全球'],
-  ['crypto', '加密'],
+  ['basics', '基础概念'],
+  ['fundamental', '基本面分析'],
+  ['technical', '技术面分析'],
+  ['macro', '宏观经济'],
+  ['instruments', '投资品种'],
+  ['planning', '理财规划'],
+  ['behavioral', '行为金融'],
 ];
 
 function buildPrompt(base: string, key: string, nickname: string): string {

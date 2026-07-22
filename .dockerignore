@@ -8,8 +8,6 @@ node_modules
 .env.backup
 .env.local
 README.md
-docs
-scripts
 pnpm-lock.yaml
 pnpm-workspace.yaml
 next-env.d.ts
