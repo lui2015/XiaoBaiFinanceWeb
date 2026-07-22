@@ -1,11 +1,12 @@
-// Prisma schema —— 与 docs/数据库DDL.sql 对齐（17 张核心表）
-// 字段命名采用 camelCase，并通过 @map 映射到 DDL 风格的 snake_case 列名。
+// Prisma schema —— SQLite 版（数据存在本地 xiaobai.db）
+// 字段命名采用 camelCase，通过 @map 映射到 snake_case 列名。
+// SQLite 不区分 VarChar / TinyInt / MediumText，用通用类型即可。
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -15,12 +16,12 @@ datasource db {
 model Category {
   id           BigInt    @id @default(autoincrement())
   parentId     BigInt?   @map("parent_id")
-  name         String    @db.VarChar(40)
-  slug         String    @unique @db.VarChar(60)
-  iconUrl      String?   @map("icon_url") @db.VarChar(255)
+  name         String    
+  slug         String    @unique 
+  iconUrl      String?   @map("icon_url") 
   sortOrder    Int       @default(0) @map("sort_order")
-  status       Int       @default(1) @db.TinyInt // 0 停用 1 启用
-  description  String?   @db.VarChar(255)
+  status       Int       @default(1)  // 0 停用 1 启用
+  description  String?   
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
@@ -36,17 +37,17 @@ model Category {
 
 model Article {
   id              BigInt    @id @default(autoincrement())
-  title           String    @db.VarChar(120)
-  slug            String    @unique @db.VarChar(160)
-  summary         String?   @db.VarChar(255)
-  sourceType      Int       @default(0) @map("source_type") @db.TinyInt // 0 HTML 1 MD 2 在线
-  contentMd       String?   @map("content_md") @db.MediumText
-  contentHtml     String    @map("content_html") @db.MediumText
-  contentText     String    @map("content_text") @db.MediumText
-  coverUrl        String?   @map("cover_url") @db.VarChar(255)
+  title           String    
+  slug            String    @unique 
+  summary         String?   
+  sourceType      Int       @default(0) @map("source_type")  // 0 HTML 1 MD 2 在线
+  contentMd       String?   @map("content_md") 
+  contentHtml     String    @map("content_html") 
+  contentText     String    @map("content_text") 
+  coverUrl        String?   @map("cover_url") 
   categoryId      BigInt    @map("category_id")
   subCategoryId   BigInt?   @map("sub_category_id")
-  status          Int       @default(0) @db.TinyInt // 0 草稿 1 已发布 2 已下架
+  status          Int       @default(0)  // 0 草稿 1 已发布 2 已下架
   isRecommend     Boolean   @default(false) @map("is_recommend")
   viewCount       Int       @default(0) @map("view_count")
   likeCount       Int       @default(0) @map("like_count")
@@ -75,8 +76,8 @@ model Article {
 
 model Tag {
   id        BigInt   @id @default(autoincrement())
-  name      String   @unique @db.VarChar(40)
-  slug      String   @unique @db.VarChar(60)
+  name      String   @unique 
+  slug      String   @unique 
   createdAt DateTime @default(now()) @map("created_at")
   articles  ArticleTag[]
   @@map("tag")
@@ -97,15 +98,15 @@ model ArticleTag {
 // =======================
 model AdminUser {
   id            BigInt    @id @default(autoincrement())
-  username      String    @unique @db.VarChar(40)
-  passwordHash  String    @map("password_hash") @db.VarChar(120)
-  realName      String?   @map("real_name") @db.VarChar(40)
-  role          Int       @default(1) @db.TinyInt // 1 管理员 2 超级管理员
-  status        Int       @default(1) @db.TinyInt
+  username      String    @unique 
+  passwordHash  String    @map("password_hash") 
+  realName      String?   @map("real_name") 
+  role          Int       @default(1)  // 1 管理员 2 超级管理员
+  status        Int       @default(1) 
   failedCount   Int       @default(0) @map("failed_count")
   lockedUntil   DateTime? @map("locked_until")
   lastLoginAt   DateTime? @map("last_login_at")
-  lastLoginIp   String?   @map("last_login_ip") @db.VarChar(45)
+  lastLoginIp   String?   @map("last_login_ip") 
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   @@map("admin_user")
@@ -113,27 +114,27 @@ model AdminUser {
 
 model User {
   id              BigInt    @id @default(autoincrement())
-  phoneHash       String?   @unique @map("phone_hash") @db.Char(64)
-  phoneCipher     String?   @map("phone_cipher") @db.VarChar(255)
-  phoneMasked     String?   @map("phone_masked") @db.VarChar(20)
-  emailHash       String?   @unique @map("email_hash") @db.Char(64)
-  emailCipher     String?   @map("email_cipher") @db.VarChar(255)
-  emailMasked     String?   @map("email_masked") @db.VarChar(64)
-  passwordHash    String?   @map("password_hash") @db.VarChar(120)
-  username        String?   @unique @db.VarChar(40) // 账号（用于账号密码登录）
-  nickname        String    @db.VarChar(40)
-  avatarUrl       String?   @map("avatar_url") @db.VarChar(255)
-  status          Int       @default(0) @db.TinyInt // 0 正常 1 封禁 2 注销中 3 已注销
+  phoneHash       String?   @unique @map("phone_hash") 
+  phoneCipher     String?   @map("phone_cipher") 
+  phoneMasked     String?   @map("phone_masked") 
+  emailHash       String?   @unique @map("email_hash") 
+  emailCipher     String?   @map("email_cipher") 
+  emailMasked     String?   @map("email_masked") 
+  passwordHash    String?   @map("password_hash") 
+  username        String?   @unique  // 账号（用于账号密码登录）
+  nickname        String    
+  avatarUrl       String?   @map("avatar_url") 
+  status          Int       @default(0)  // 0 正常 1 封禁 2 注销中 3 已注销
   isAdmin         Boolean   @default(false) @map("is_admin") // 前台管理员（可进入 /me/manage）
   cancelAt        DateTime? @map("cancel_at")
   registeredAt    DateTime  @default(now()) @map("registered_at")
   lastLoginAt     DateTime? @map("last_login_at")
-  lastLoginIp     String?   @map("last_login_ip") @db.VarChar(45)
+  lastLoginIp     String?   @map("last_login_ip") 
   failedCount     Int       @default(0) @map("failed_count")
   lockedUntil     DateTime? @map("locked_until")
   // 第三方登录绑定
-  wechatOpenid    String?   @unique @map("wechat_openid") @db.VarChar(64)
-  wechatUnionid   String?   @map("wechat_unionid") @db.VarChar(64)
+  wechatOpenid    String?   @unique @map("wechat_openid") 
+  wechatUnionid   String?   @map("wechat_unionid") 
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -142,6 +143,7 @@ model User {
   histories    UserHistory[]
   feedbacks    UserFeedback[]
   refreshTokens RefreshToken[]
+  openApiKeys   OpenApiKey[]
 
   @@index([status])
   @@map("user")
@@ -187,9 +189,9 @@ model UserFeedback {
   id         BigInt   @id @default(autoincrement())
   userId     BigInt   @map("user_id")
   articleId  BigInt   @map("article_id")
-  type       Int      @db.TinyInt // 0 有用 1 没用 2 报错
-  content    String?  @db.VarChar(500)
-  status     Int      @default(0) @db.TinyInt // 0 待处理 1 已采纳 2 已修复 3 已关闭
+  type       Int       // 0 有用 1 没用 2 报错
+  content    String?  
+  status     Int      @default(0)  // 0 待处理 1 已采纳 2 已修复 3 已关闭
   handlerId  BigInt?  @map("handler_id")
   handledAt  DateTime? @map("handled_at")
   createdAt  DateTime @default(now()) @map("created_at")
@@ -206,10 +208,10 @@ model UserFeedback {
 // =======================
 model SmsLog {
   id        BigInt   @id @default(autoincrement())
-  phoneHash String   @map("phone_hash") @db.Char(64)
-  scene     String   @db.VarChar(20)
-  codeHash  String   @map("code_hash") @db.VarChar(120)
-  ip        String?  @db.VarChar(45)
+  phoneHash String   @map("phone_hash") 
+  scene     String   
+  codeHash  String   @map("code_hash") 
+  ip        String?  
   used      Boolean  @default(false)
   expiredAt DateTime @map("expired_at")
   createdAt DateTime @default(now()) @map("created_at")
@@ -220,9 +222,9 @@ model SmsLog {
 model RefreshToken {
   id         BigInt   @id @default(autoincrement())
   userId     BigInt   @map("user_id")
-  jti        String   @unique @db.VarChar(64)
-  ua         String?  @db.VarChar(255)
-  ip         String?  @db.VarChar(45)
+  jti        String   @unique 
+  ua         String?  
+  ip         String?  
   revoked    Boolean  @default(false)
   expiredAt  DateTime @map("expired_at")
   createdAt  DateTime @default(now()) @map("created_at")
@@ -234,12 +236,12 @@ model RefreshToken {
 model OperationLog {
   id         BigInt   @id @default(autoincrement())
   adminId    BigInt?  @map("admin_id")
-  action     String   @db.VarChar(60)
-  targetType String?  @map("target_type") @db.VarChar(40)
-  targetId   String?  @map("target_id") @db.VarChar(40)
-  payload    Json?
-  ip         String?  @db.VarChar(45)
-  ua         String?  @db.VarChar(255)
+  action     String   
+  targetType String?  @map("target_type") 
+  targetId   String?  @map("target_id") 
+  payload    String?   @map("payload") // JSON string stored as text
+  ip         String?  
+  ua         String?  
   createdAt  DateTime @default(now()) @map("created_at")
   @@index([adminId, createdAt])
   @@map("operation_log")
@@ -247,10 +249,10 @@ model OperationLog {
 
 model SearchLog {
   id          BigInt   @id @default(autoincrement())
-  keyword     String   @db.VarChar(60)
+  keyword     String   
   resultCount Int      @default(0) @map("result_count")
-  ip          String?  @db.VarChar(45)
-  ua          String?  @db.VarChar(255)
+  ip          String?  
+  ua          String?  
   createdAt   DateTime @default(now()) @map("created_at")
   @@index([keyword])
   @@index([createdAt])
@@ -261,8 +263,8 @@ model ArticleViewLog {
   id        BigInt   @id @default(autoincrement())
   articleId BigInt   @map("article_id")
   userId    BigInt?  @map("user_id")
-  ip        String?  @db.VarChar(45)
-  ua        String?  @db.VarChar(255)
+  ip        String?  
+  ua        String?  
   createdAt DateTime @default(now()) @map("created_at")
   @@index([articleId, createdAt])
   @@map("article_view_log")
@@ -273,11 +275,11 @@ model ArticleViewLog {
 // =======================
 model Banner {
   id         BigInt   @id @default(autoincrement())
-  title      String   @db.VarChar(80)
-  imageUrl   String   @map("image_url") @db.VarChar(255)
-  linkUrl    String?  @map("link_url") @db.VarChar(255)
+  title      String   
+  imageUrl   String   @map("image_url") 
+  linkUrl    String?  @map("link_url") 
   sortOrder  Int      @default(0) @map("sort_order")
-  status     Int      @default(1) @db.TinyInt
+  status     Int      @default(1) 
   startAt    DateTime? @map("start_at")
   endAt      DateTime? @map("end_at")
   createdAt  DateTime @default(now()) @map("created_at")
@@ -295,9 +297,38 @@ model HomeRecommend {
 }
 
 model SysConfig {
-  k         String   @id @db.VarChar(60)
-  v         String   @db.Text
-  remark    String?  @db.VarChar(255)
+  k         String   @id 
+  v         String   
+  remark    String?  
   updatedAt DateTime @updatedAt @map("updated_at")
   @@map("sys_config")
+}
+
+// =======================
+// 开放平台
+// =======================
+model OpenApiKey {
+  id         BigInt   @id @default(autoincrement())
+  userId     BigInt   @map("user_id")
+  // 明文 token 仅在创建时返回一次；库中只存 sha256 哈希，前缀用于界面展示
+  keyHash    String   @unique @map("key_hash")
+  keyPrefix  String   @map("key_prefix")
+  name       String?  // 用户自定义的备注名
+  status     Int      @default(1)  // 1 启用 0 停用
+  lastUsedAt DateTime? @map("last_used_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("open_api_key")
+}
+
+model OpenApiCallStat {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  date      String   @map("date")  // YYYY-MM-DD（UTC）
+  callCount BigInt   @default(0) @map("call_count")
+  @@unique([userId, date])
+  @@index([userId])
+  @@map("open_api_call_stat")
 }

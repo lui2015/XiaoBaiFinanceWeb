@@ -34,11 +34,13 @@ function htmlToText(html: string): string {
 async function ensureAdmin() {
   const username = process.env.SEED_SUPER_ADMIN_USERNAME || 'admin';
   const password = process.env.SEED_SUPER_ADMIN_PASSWORD || 'Admin@12345';
-  // 若该 username 已存在，则不覆盖，避免误改已登录管理员密码
   const exists = await prisma.adminUser.findUnique({ where: { username } });
   if (exists) return;
+  const maxId = await prisma.adminUser.aggregate({ _max: { id: true } });
+  const nextId = (maxId._max.id as number | undefined) || 0;
   await prisma.adminUser.create({
     data: {
+      id: nextId + 1,
       username,
       passwordHash: await bcrypt.hash(password, 10),
       role: 2,
@@ -52,10 +54,12 @@ async function ensureAccountUser() {
   const username = process.env.SEED_ACCOUNT_USERNAME || 'luli';
   const password = process.env.SEED_ACCOUNT_PASSWORD || 'luli116574';
   const passwordHash = await bcrypt.hash(password, 10);
+  const maxId = await prisma.user.aggregate({ _max: { id: true } });
+  const nextId = (maxId._max.id as number | undefined) || 0;
   await prisma.user.upsert({
     where: { username },
     update: { passwordHash, status: 0, isAdmin: true },
-    create: { username, passwordHash, nickname: username, status: 0, isAdmin: true },
+    create: { id: nextId + 1, username, passwordHash, nickname: username, status: 0, isAdmin: true },
   });
   console.log(`[seed] account user ready: ${username} / ${password}`);
 }
@@ -71,19 +75,20 @@ const CATEGORIES: Array<{ name: string; slug: string; sort: number; children?: {
 ];
 
 async function ensureCategories() {
+  let nextCatId = (await prisma.category.aggregate({ _max: { id: true } }))._max.id as number || 0;
   for (const c of CATEGORIES) {
-    const parent = await prisma.category.upsert({
-      where: { slug: c.slug },
-      update: { name: c.name, sortOrder: c.sort, status: 1 },
-      create: { name: c.name, slug: c.slug, sortOrder: c.sort, status: 1 },
-    });
-    if (c.children) {
-      for (const sub of c.children) {
-        await prisma.category.upsert({
-          where: { slug: sub.slug },
-          update: { name: sub.name, parentId: parent.id, status: 1 },
-          create: { name: sub.name, slug: sub.slug, parentId: parent.id, status: 1 },
-        });
+    const existing = await prisma.category.findUnique({ where: { slug: c.slug } });
+    if (existing) {
+      await prisma.category.update({ where: { slug: c.slug }, data: { name: c.name, sortOrder: c.sort, status: 1 } });
+      nextCatId = Math.max(nextCatId, existing.id as number);
+    } else {
+      nextCatId++;
+      const parent = await prisma.category.create({ data: { id: nextCatId, name: c.name, slug: c.slug, sortOrder: c.sort, status: 1 } });
+      if (c.children) {
+        for (const sub of c.children) {
+          nextCatId++;
+          await prisma.category.create({ data: { id: nextCatId, name: sub.name, slug: sub.slug, parentId: parent.id, status: 1 } });
+        }
       }
     }
   }
@@ -133,29 +138,35 @@ const SAMPLES: Array<{ title: string; slug: string; categorySlug: string; subSlu
 ];
 
 async function ensureArticles() {
+  let nextArtId = (await prisma.article.aggregate({ _max: { id: true } }))._max.id as number || 0;
   for (const s of SAMPLES) {
     const cat = await prisma.category.findUnique({ where: { slug: s.categorySlug } });
     if (!cat) continue;
     const sub = s.subSlug ? await prisma.category.findUnique({ where: { slug: s.subSlug } }) : null;
+    const existing = await prisma.article.findUnique({ where: { slug: s.slug } });
     const html = sanitizeHtmlContent(s.html);
     const text = htmlToText(html);
-    await prisma.article.upsert({
-      where: { slug: s.slug },
-      update: {},
-      create: {
-        title: s.title,
-        slug: s.slug,
-        summary: s.summary,
-        sourceType: 0,
-        contentHtml: html,
-        contentText: text,
-        categoryId: cat.id,
-        subCategoryId: sub?.id,
-        status: 1,
-        isRecommend: !!s.recommend,
-        publishAt: new Date(),
-      },
-    });
+    if (existing) {
+      await prisma.article.update({ where: { slug: s.slug }, data: { status: 1, publishAt: new Date() } });
+    } else {
+      nextArtId++;
+      await prisma.article.create({
+        data: {
+          id: nextArtId,
+          title: s.title,
+          slug: s.slug,
+          summary: s.summary,
+          sourceType: 0,
+          contentHtml: html,
+          contentText: text,
+          categoryId: cat.id,
+          subCategoryId: sub?.id,
+          status: 1,
+          isRecommend: !!s.recommend,
+          publishAt: new Date(),
+        },
+      });
+    }
   }
 }
 

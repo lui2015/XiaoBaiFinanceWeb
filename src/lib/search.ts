@@ -1,5 +1,5 @@
 /**
- * 搜索服务抽象：MySQL FULLTEXT 或 Elasticsearch
+ * 搜索服务抽象：SQLite 内存 / Elasticsearch
  */
 import { prisma } from './prisma';
 
@@ -24,45 +24,68 @@ export interface SearchService {
   removeArticle(id: bigint): Promise<void>;
 }
 
-class MysqlSearch implements SearchService {
-  async search({ keyword, categoryId, page, size }: { keyword: string; categoryId?: bigint; page: number; size: number }) {
-    const offset = (page - 1) * size;
-    const kw = `%${keyword}%`;
-    const where: string[] = [`status = 1`, `deleted_at IS NULL`];
-    const params: unknown[] = [];
-    if (categoryId) { where.push(`category_id = ?`); params.push(categoryId); }
-    where.push(`(title LIKE ? OR content_text LIKE ?)`);
-    params.push(kw, kw);
+/** 内存搜索：适用于 SQLite 单机场景，全部文章加载到内存做模糊匹配 */
+class MemorySearch implements SearchService {
+  private cache: Array<{
+    id: bigint; title: string; summary: string; slug: string;
+    categoryId: bigint; publishAt: Date | null; deletedAt?: Date | null; status: number;
+  }> | null = null;
+  private cacheTs = 0;
+  private readonly CACHE_TTL = 5_000; // 5 秒缓存
 
-    const sql = `
-      SELECT id, title, slug, summary, category_id, publish_at,
-             CASE WHEN title LIKE ? THEN 100 ELSE 50 END AS score
-      FROM article
-      WHERE ${where.join(' AND ')}
-      ORDER BY score DESC, publish_at DESC
-      LIMIT ? OFFSET ?`;
-    const countSql = `SELECT COUNT(*) AS c FROM article WHERE ${where.join(' AND ')}`;
+  private async loadCache() {
+    if (this.cache && Date.now() - this.cacheTs < this.CACHE_TTL) return;
+    this.cache = await prisma.article.findMany({
+      select: { id: true, title: true, summary: true, slug: true, categoryId: true, publishAt: true, deletedAt: true, status: true },
+      where: { deletedAt: null },
+    });
+    this.cacheTs = Date.now();
+  }
 
-    const rows = await prisma.$queryRawUnsafe<any[]>(sql, kw, ...params, size, offset);
-    const totalRows = await prisma.$queryRawUnsafe<any[]>(countSql, ...params);
-    const total = Number(totalRows[0]?.c || 0);
+  private match(article: any, keyword: string) {
     const re = new RegExp(escapeReg(keyword), 'gi');
-    const list: SearchHit[] = rows.map((r) => ({
-      id: String(r.id),
-      title: r.title,
-      summary: r.summary || '',
-      slug: r.slug,
-      categoryId: String(r.category_id),
-      publishAt: r.publish_at ? new Date(r.publish_at).toISOString() : null,
+    const titleMatch = article.title.match(re);
+    const summaryMatch = (article.summary || '').match(re);
+    if (!titleMatch && !summaryMatch) return null;
+    const score = titleMatch ? 100 : 50;
+    return {
+      id: String(article.id),
+      title: article.title,
+      summary: article.summary || '',
+      slug: article.slug,
+      categoryId: String(article.categoryId),
+      publishAt: article.publishAt ? new Date(article.publishAt).toISOString() : null,
       highlight: {
-        title: r.title.replace(re, (m: string) => `<em>${m}</em>`),
-        content: (r.summary || '').replace(re, (m: string) => `<em>${m}</em>`),
+        title: article.title.replace(re, (m: string) => `<em>${m}</em>`),
+        content: (article.summary || '').replace(re, (m: string) => `<em>${m}</em>`),
       },
-    }));
+      _score: score,
+    };
+  }
+
+  async search({ keyword, categoryId, page, size }: { keyword: string; categoryId?: bigint; page: number; size: number }) {
+    await this.loadCache();
+    let results = (this.cache || []).filter(a => a.status === 1 && !a.deletedAt);
+    if (categoryId) results = results.filter(a => a.categoryId === Number(categoryId));
+    results = results.filter(a => a.title.includes(keyword) || (a.summary || '').includes(keyword));
+    // 简单排序：标题命中优先，按发布时间倒序
+    results.sort((a, b) => {
+      const sa = a.title.includes(keyword) ? 100 : 50;
+      const sb = b.title.includes(keyword) ? 100 : 50;
+      if (sb !== sa) return sb - sa;
+      return (b.publishAt || new Date(0)).getTime() - (a.publishAt || new Date(0)).getTime();
+    });
+    const total = results.length;
+    const offset = (page - 1) * size;
+    const list = results.slice(offset, offset + size).map(r => ({
+      id: r.id, title: r.title, summary: r.summary || '', slug: r.slug,
+      categoryId: r.categoryId, publishAt: r.publishAt ? new Date(r.publishAt).toISOString() : null,
+      highlight: this.match(r, keyword)?.highlight,
+    })) as SearchHit[];
     return { total, list };
   }
-  async upsertArticle() { /* MySQL 不需要单独同步 */ }
-  async removeArticle() { /* 同上 */ }
+  async upsertArticle() { this.cache = null; }
+  async removeArticle() { this.cache = null; }
 }
 
 class ESSearch implements SearchService {
@@ -132,7 +155,7 @@ function escapeReg(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 let _instance: SearchService | null = null;
 export function getSearch(): SearchService {
   if (_instance) return _instance;
-  const provider = process.env.SEARCH_PROVIDER || 'mysql';
-  _instance = provider === 'es' ? new ESSearch() : new MysqlSearch();
+  const provider = process.env.SEARCH_PROVIDER || 'memory';
+  _instance = provider === 'es' ? new ESSearch() : new MemorySearch();
   return _instance;
 }

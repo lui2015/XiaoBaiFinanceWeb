@@ -48,4 +48,4 @@ RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app
 USER nextjs
 EXPOSE 8093
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && if [ \"$RUN_SEED\" = \"1\" ]; then node node_modules/tsx/dist/cli.mjs prisma/seed.ts || true; fi && node node_modules/next/dist/bin/next start -p 8093 -H 0.0.0.0"]
+CMD ["sh", "-c", "npx prisma migrate deploy && if [ \"$RUN_SEED\" = \"1\" ]; then node node_modules/tsx/dist/cli.mjs prisma/seed.ts || true; fi && node node_modules/next/dist/bin/next start -p 8093 -H 0.0.0.0"]

@@ -45,6 +45,7 @@ export default function ArticleEditClient({ categories: cats, article }: { categ
   const [parseInfo, setParseInfo] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   const subs = useMemo(() => (categoryId ? subsOf(categoryId) : []), [categoryId, cats]);
 
@@ -130,8 +131,17 @@ export default function ArticleEditClient({ categories: cats, article }: { categ
         </div>
 
         {srcTab === 0 ? (
-          <div>
-            <input type="file" accept=".html,.htm" className="text-sm" onChange={e => e.target.files && uploadFile(e.target.files[0], 'html')} />
+          <div
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) uploadFile(f, 'html'); }}
+            className={`transition-colors rounded-xl p-4 border-2 border-dashed ${dragOver ? 'border-sunny bg-sunny/10' : 'border-ink/20'}`}
+          >
+            <div className="flex items-center gap-3">
+              <input type="file" accept=".html,.htm" className="text-sm" onChange={e => e.target.files && uploadFile(e.target.files[0], 'html')} />
+              {dragOver && <span className="text-xs text-sunny font-semibold">松手上传</span>}
+            </div>
+            {!contentHtml && !dragOver && <p className="text-xs text-ink/40 mt-2">或拖拽 .html 文件到此处上传</p>}
             {parseInfo && <div className="text-xs text-ink/50 mt-2">{parseInfo}</div>}
             <textarea
               value={contentHtml} onChange={e => setContentHtml(e.target.value)} rows={16}
@@ -140,8 +150,17 @@ export default function ArticleEditClient({ categories: cats, article }: { categ
             />
           </div>
         ) : (
-          <div>
-            <input type="file" accept=".md,.markdown,.txt" className="text-sm" onChange={e => e.target.files && uploadFile(e.target.files[0], 'md')} />
+          <div
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) uploadFile(f, 'md'); }}
+            className={`transition-colors rounded-xl p-4 border-2 border-dashed ${dragOver ? 'border-sunny bg-sunny/10' : 'border-ink/20'}`}
+          >
+            <div className="flex items-center gap-3">
+              <input type="file" accept=".md,.markdown,.txt" className="text-sm" onChange={e => e.target.files && uploadFile(e.target.files[0], 'md')} />
+              {dragOver && <span className="text-xs text-sunny font-semibold">松手上传</span>}
+            </div>
+            {!contentMd && !dragOver && <p className="text-xs text-ink/40 mt-2">或拖拽 .md 文件到此处上传</p>}
             {parseInfo && <div className="text-xs text-ink/50 mt-2">{parseInfo}</div>}
             <textarea
               value={contentMd} onChange={e => setContentMd(e.target.value)} rows={16}

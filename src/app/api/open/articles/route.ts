@@ -1,12 +1,14 @@
 /**
- * 对外开放投稿接口
+ * 开放平台投稿接口
  * POST /api/open/articles
  *
- * 鉴权：无需鉴权（公开接口，任何人可调用）。
+ * 鉴权：需要开放平台 API Key（在「设置-开放平台」中生成）。
+ *   通过 Authorization: Bearer <key> 或 x-api-key: <key> 携带。
+ *   每次成功调用都会计入该用户「当日 / 累计」调用次数。
  * 行为：投稿内容经安全净化后「直接发布」（status=1），无需人工审核即对外可见。
- * 安全策略（无鉴权 + 直接发布，故防滥用全靠以下几道）：
+ * 安全策略：
  *  - 内容强制净化（防 XSS）；
- *  - 按来源 IP 限流（较严格）；
+ *  - 按来源 IP + API Key 双重限流；
  *  - 分类必须存在且启用；
  *  - slug 冲突自动追加随机后缀，避免因重名报错。
  */
@@ -19,6 +21,7 @@ import { sanitizeRichHtml, markdownToSanitizedHtml, htmlToText } from '@/lib/san
 import { slugify, getClientIp, getUA, Reg } from '@/lib/utils';
 import { fixedWindow } from '@/lib/rate-limit';
 import { getSearch } from '@/lib/search';
+import { resolveOpenApiKey, recordOpenApiCall } from '@/lib/open-api';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,9 +65,15 @@ export async function POST(req: NextRequest) {
   return apiHandler(async () => {
     const ip = getClientIp(req);
 
-    // 无鉴权公开接口：仅按来源 IP 限流（较严格），配合内容净化降低匿名滥用风险
+    // 开放平台鉴权：解析并校验 API Key（无效/停用 -> 401）
+    const key = await resolveOpenApiKey(req);
+
+    // 双重限流：来源 IP + API Key
     if (!fixedWindow(`open:submit:ip:${ip}`, 20, 60)) {
       throw ApiErrors.tooMany('提交过于频繁，请稍后再试');
+    }
+    if (!fixedWindow(`open:submit:key:${key.id}`, 60, 60)) {
+      throw ApiErrors.tooMany('该密钥调用过于频繁，请稍后再试');
     }
 
     const body = submitSchema.parse(await req.json().catch(() => ({})));
@@ -144,17 +153,26 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 审计留痕（adminId 留空，表示来自对外接口）
+    // 审计留痕（记录开放平台用户与密钥）
     await prisma.operationLog.create({
       data: {
         action: 'open.article.submit',
         targetType: 'article',
         targetId: String(article.id),
-        payload: { source: 'open-api', title: body.title, published: true },
+        payload: JSON.stringify({
+          source: 'open-api',
+          keyId: String(key.id),
+          userId: String(key.userId),
+          title: body.title,
+          published: true,
+        }),
         ip,
         ua: getUA(req),
       },
     });
+
+    // 计入开放平台调用统计（当日 + 累计）
+    await recordOpenApiCall(key.userId, key.id);
 
     // 已发布：同步搜索索引（失败不阻断发布）
     try {

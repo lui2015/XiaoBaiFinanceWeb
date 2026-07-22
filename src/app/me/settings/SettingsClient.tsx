@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/components/Toaster';
 import { apiFetch } from '@/lib/http';
@@ -56,6 +57,17 @@ export default function SettingsClient({ user }: { user: { id: string; nickname:
           {saving ? '保存中…' : '保存'}
         </button>
       </div>
+
+      <Link
+        href="/XiaoBaiFinance/me/settings/open-platform"
+        className="bg-white rounded-lg p-5 border border-gray-100 mt-4 flex items-center justify-between hover:border-brand-300"
+      >
+        <div>
+          <h2 className="text-sm font-semibold text-gray-900">开放平台</h2>
+          <p className="text-xs text-gray-500 mt-1">生成 API 密钥，让 AI 直接投稿；可复制提示词交给你的 AI 使用。</p>
+        </div>
+        <span className="text-brand-500 text-sm">进入 →</span>
+      </Link>
 
       <div className="bg-white rounded-lg p-5 border border-gray-100 mt-4">
         <h2 className="text-sm font-semibold text-rose-500 mb-2">危险操作</h2>
