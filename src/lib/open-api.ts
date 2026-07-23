@@ -37,8 +37,8 @@ export function extractApiKey(req: NextRequest): string | null {
 }
 
 export interface ResolvedKey {
-  id: bigint;
-  userId: bigint;
+  id: number;
+  userId: number;
   name: string | null;
 }
 
@@ -57,7 +57,7 @@ export async function resolveOpenApiKey(req: NextRequest): Promise<ResolvedKey> 
 }
 
 /** 记录一次成功的开放接口调用（更新密钥最后使用时间 + 累计当日/总调用次数） */
-export async function recordOpenApiCall(userId: bigint, keyId: bigint): Promise<void> {
+export async function recordOpenApiCall(userId: number, keyId: number): Promise<void> {
   const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
   await prisma.openApiKey.update({
     where: { id: keyId },
@@ -71,7 +71,7 @@ export async function recordOpenApiCall(userId: bigint, keyId: bigint): Promise<
 }
 
 /** 查询某用户当日与累计调用次数 */
-export async function getOpenApiStats(userId: bigint): Promise<{ today: number; total: number }> {
+export async function getOpenApiStats(userId: number): Promise<{ today: number; total: number }> {
   const date = new Date().toISOString().slice(0, 10);
   const [todayRow, agg] = await Promise.all([
     prisma.openApiCallStat.findUnique({ where: { userId_date: { userId, date } } }),

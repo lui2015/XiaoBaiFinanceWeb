@@ -9,7 +9,7 @@ export async function GET(_req: NextRequest, { params }: { params: { idOrSlug: s
     const isNumeric = /^\d+$/.test(idOrSlug);
     const a = await prisma.article.findFirst({
       where: {
-        ...(isNumeric ? { id: BigInt(idOrSlug) } : { slug: idOrSlug }),
+        ...(isNumeric ? { id: Number(idOrSlug) } : { slug: idOrSlug }),
         deletedAt: null,
       },
       include: {

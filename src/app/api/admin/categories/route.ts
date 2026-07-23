@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const c = await prisma.category.create({
       data: {
         name: body.name, slug: body.slug,
-        parentId: body.parentId ? BigInt(body.parentId) : null,
+        parentId: body.parentId ? Number(body.parentId) : null,
         sortOrder: body.sortOrder ?? 0,
         status: body.status ?? 1,
         iconUrl: body.iconUrl,

@@ -16,6 +16,7 @@ export default async function ManagePage() {
     orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
     select: { id: true, parentId: true, name: true, slug: true, sortOrder: true, status: true },
   });
+  const catsForClient = cats.map(c => ({ ...c, id: String(c.id), parentId: c.parentId ? String(c.parentId) : null }));
 
   return (
     <div className="mx-auto max-w-[900px] px-4 py-6">
@@ -23,7 +24,7 @@ export default async function ManagePage() {
         <h1 className="text-xl font-bold">内容管理</h1>
         <Link href="/me" className="text-sm text-brand-500">返回个人中心</Link>
       </div>
-      <ManageClient categories={jsonSafe(cats)} />
+      <ManageClient categories={jsonSafe(catsForClient)} />
     </div>
   );
 }

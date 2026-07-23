@@ -23,7 +23,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   return apiHandler(async () => {
     await requireManager();
     const a = await prisma.article.findFirst({
-      where: { id: BigInt(params.id), deletedAt: null },
+      where: { id: Number(params.id), deletedAt: null },
     });
     if (!a) throw ApiErrors.notFound();
     return jsonSafe(a);
@@ -33,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   return apiHandler(async () => {
     await requireManager();
-    const id = BigInt(params.id);
+    const id = Number(params.id);
     const exists = await prisma.article.findFirst({ where: { id, deletedAt: null } });
     if (!exists) throw ApiErrors.notFound();
 
@@ -41,8 +41,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const data: any = {};
     if (body.title) data.title = body.title;
     if (body.summary !== undefined) data.summary = body.summary;
-    if (body.categoryId) data.categoryId = BigInt(body.categoryId);
-    if ('subCategoryId' in body) data.subCategoryId = body.subCategoryId ? BigInt(body.subCategoryId) : null;
+    if (body.categoryId) data.categoryId = Number(body.categoryId);
+    if ('subCategoryId' in body) data.subCategoryId = body.subCategoryId ? Number(body.subCategoryId) : null;
     if ('coverUrl' in body) data.coverUrl = body.coverUrl;
 
     if (body.sourceType !== undefined) {
@@ -80,7 +80,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   return apiHandler(async () => {
     await requireManager();
-    const id = BigInt(params.id);
+    const id = Number(params.id);
     const exists = await prisma.article.findFirst({ where: { id, deletedAt: null } });
     if (!exists) throw ApiErrors.notFound();
     await prisma.article.update({ where: { id }, data: { deletedAt: new Date(), status: 2 } });

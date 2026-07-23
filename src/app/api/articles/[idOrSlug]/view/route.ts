@@ -8,7 +8,7 @@ import { sha256Hex } from '@/lib/crypto';
 export async function POST(req: NextRequest, { params }: { params: { idOrSlug: string } }) {
   return apiHandler(async () => {
     if (!/^\d+$/.test(params.idOrSlug)) throw ApiErrors.badRequest();
-    const articleId = BigInt(params.idOrSlug);
+    const articleId = Number(params.idOrSlug);
     const ip = getClientIp(req);
     const ua = getUA(req);
     // 防刷：30 分钟内同一 IP 同一文章只计 1 次

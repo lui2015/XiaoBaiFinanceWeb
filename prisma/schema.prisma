@@ -1,6 +1,9 @@
 // Prisma schema —— SQLite 版（数据存在本地 xiaobai.db）
 // 字段命名采用 camelCase，通过 @map 映射到 snake_case 列名。
 // SQLite 不区分 VarChar / TinyInt / MediumText，用通用类型即可。
+// 重要：自增主键 / 外键一律用 Int（映射为 INTEGER），
+// 因为 SQLite 只有 INTEGER PRIMARY KEY 才会自增；若标注为 64 位整型会
+// 映射成 BIGINT，导致不自动生成 id，INSERT 不传 id 时直接报非空约束错误。
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,8 +17,8 @@ datasource db {
 // 内容
 // =======================
 model Category {
-  id           BigInt    @id @default(autoincrement())
-  parentId     BigInt?   @map("parent_id")
+  id           Int    @id @default(autoincrement())
+  parentId     Int?   @map("parent_id")
   name         String    
   slug         String    @unique 
   iconUrl      String?   @map("icon_url") 
@@ -36,7 +39,7 @@ model Category {
 }
 
 model Article {
-  id              BigInt    @id @default(autoincrement())
+  id              Int    @id @default(autoincrement())
   title           String    
   slug            String    @unique 
   summary         String?   
@@ -45,14 +48,14 @@ model Article {
   contentHtml     String    @map("content_html") 
   contentText     String    @map("content_text") 
   coverUrl        String?   @map("cover_url") 
-  categoryId      BigInt    @map("category_id")
-  subCategoryId   BigInt?   @map("sub_category_id")
+  categoryId      Int    @map("category_id")
+  subCategoryId   Int?   @map("sub_category_id")
   status          Int       @default(0)  // 0 草稿 1 已发布 2 已下架
   isRecommend     Boolean   @default(false) @map("is_recommend")
   viewCount       Int       @default(0) @map("view_count")
   likeCount       Int       @default(0) @map("like_count")
   favoriteCount   Int       @default(0) @map("favorite_count")
-  authorAdminId   BigInt?   @map("author_admin_id")
+  authorAdminId   Int?   @map("author_admin_id")
   createdBy       Int       @default(0) @map("created_by")  // 0 人工创建  1 API 创建
   publishAt       DateTime? @map("publish_at")
   scheduledAt     DateTime? @map("scheduled_at") // 定时发布
@@ -76,7 +79,7 @@ model Article {
 }
 
 model Tag {
-  id        BigInt   @id @default(autoincrement())
+  id        Int   @id @default(autoincrement())
   name      String   @unique 
   slug      String   @unique 
   createdAt DateTime @default(now()) @map("created_at")
@@ -85,8 +88,8 @@ model Tag {
 }
 
 model ArticleTag {
-  articleId BigInt @map("article_id")
-  tagId     BigInt @map("tag_id")
+  articleId Int @map("article_id")
+  tagId     Int @map("tag_id")
   article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
   tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
   @@id([articleId, tagId])
@@ -98,7 +101,7 @@ model ArticleTag {
 // 账号
 // =======================
 model AdminUser {
-  id            BigInt    @id @default(autoincrement())
+  id            Int    @id @default(autoincrement())
   username      String    @unique 
   passwordHash  String    @map("password_hash") 
   realName      String?   @map("real_name") 
@@ -114,7 +117,7 @@ model AdminUser {
 }
 
 model User {
-  id              BigInt    @id @default(autoincrement())
+  id              Int    @id @default(autoincrement())
   phoneHash       String?   @unique @map("phone_hash") 
   phoneCipher     String?   @map("phone_cipher") 
   phoneMasked     String?   @map("phone_masked") 
@@ -151,9 +154,9 @@ model User {
 }
 
 model UserFavorite {
-  id        BigInt   @id @default(autoincrement())
-  userId    BigInt   @map("user_id")
-  articleId BigInt   @map("article_id")
+  id        Int   @id @default(autoincrement())
+  userId    Int   @map("user_id")
+  articleId Int   @map("article_id")
   createdAt DateTime @default(now()) @map("created_at")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
@@ -163,9 +166,9 @@ model UserFavorite {
 }
 
 model UserLike {
-  id        BigInt   @id @default(autoincrement())
-  userId    BigInt   @map("user_id")
-  articleId BigInt   @map("article_id")
+  id        Int   @id @default(autoincrement())
+  userId    Int   @map("user_id")
+  articleId Int   @map("article_id")
   createdAt DateTime @default(now()) @map("created_at")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
@@ -175,9 +178,9 @@ model UserLike {
 }
 
 model UserHistory {
-  id        BigInt   @id @default(autoincrement())
-  userId    BigInt   @map("user_id")
-  articleId BigInt   @map("article_id")
+  id        Int   @id @default(autoincrement())
+  userId    Int   @map("user_id")
+  articleId Int   @map("article_id")
   viewedAt  DateTime @default(now()) @map("viewed_at")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
@@ -187,13 +190,13 @@ model UserHistory {
 }
 
 model UserFeedback {
-  id         BigInt   @id @default(autoincrement())
-  userId     BigInt   @map("user_id")
-  articleId  BigInt   @map("article_id")
+  id         Int   @id @default(autoincrement())
+  userId     Int   @map("user_id")
+  articleId  Int   @map("article_id")
   type       Int       // 0 有用 1 没用 2 报错
   content    String?  
   status     Int      @default(0)  // 0 待处理 1 已采纳 2 已修复 3 已关闭
-  handlerId  BigInt?  @map("handler_id")
+  handlerId  Int?  @map("handler_id")
   handledAt  DateTime? @map("handled_at")
   createdAt  DateTime @default(now()) @map("created_at")
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -208,7 +211,7 @@ model UserFeedback {
 // 安全 / 审计
 // =======================
 model SmsLog {
-  id        BigInt   @id @default(autoincrement())
+  id        Int   @id @default(autoincrement())
   phoneHash String   @map("phone_hash") 
   scene     String   
   codeHash  String   @map("code_hash") 
@@ -221,8 +224,8 @@ model SmsLog {
 }
 
 model RefreshToken {
-  id         BigInt   @id @default(autoincrement())
-  userId     BigInt   @map("user_id")
+  id         Int   @id @default(autoincrement())
+  userId     Int   @map("user_id")
   jti        String   @unique 
   ua         String?  
   ip         String?  
@@ -235,8 +238,8 @@ model RefreshToken {
 }
 
 model OperationLog {
-  id         BigInt   @id @default(autoincrement())
-  adminId    BigInt?  @map("admin_id")
+  id         Int   @id @default(autoincrement())
+  adminId    Int?  @map("admin_id")
   action     String   
   targetType String?  @map("target_type") 
   targetId   String?  @map("target_id") 
@@ -249,7 +252,7 @@ model OperationLog {
 }
 
 model SearchLog {
-  id          BigInt   @id @default(autoincrement())
+  id          Int   @id @default(autoincrement())
   keyword     String   
   resultCount Int      @default(0) @map("result_count")
   ip          String?  
@@ -261,9 +264,9 @@ model SearchLog {
 }
 
 model ArticleViewLog {
-  id        BigInt   @id @default(autoincrement())
-  articleId BigInt   @map("article_id")
-  userId    BigInt?  @map("user_id")
+  id        Int   @id @default(autoincrement())
+  articleId Int   @map("article_id")
+  userId    Int?  @map("user_id")
   ip        String?  
   ua        String?  
   createdAt DateTime @default(now()) @map("created_at")
@@ -275,7 +278,7 @@ model ArticleViewLog {
 // 运营配置
 // =======================
 model Banner {
-  id         BigInt   @id @default(autoincrement())
+  id         Int   @id @default(autoincrement())
   title      String   
   imageUrl   String   @map("image_url") 
   linkUrl    String?  @map("link_url") 
@@ -289,8 +292,8 @@ model Banner {
 }
 
 model HomeRecommend {
-  id        BigInt @id @default(autoincrement())
-  articleId BigInt @map("article_id")
+  id        Int @id @default(autoincrement())
+  articleId Int @map("article_id")
   sortOrder Int    @default(0) @map("sort_order")
   createdAt DateTime @default(now()) @map("created_at")
   @@unique([articleId])
@@ -309,8 +312,8 @@ model SysConfig {
 // 开放平台
 // =======================
 model OpenApiKey {
-  id         BigInt   @id @default(autoincrement())
-  userId     BigInt   @map("user_id")
+  id         Int   @id @default(autoincrement())
+  userId     Int   @map("user_id")
   // 明文 token 仅在创建时返回一次；库中只存 sha256 哈希，前缀用于界面展示
   keyHash    String   @unique @map("key_hash")
   keyPrefix  String   @map("key_prefix")
@@ -325,10 +328,10 @@ model OpenApiKey {
 }
 
 model OpenApiCallStat {
-  id        BigInt   @id @default(autoincrement())
-  userId    BigInt   @map("user_id")
+  id        Int   @id @default(autoincrement())
+  userId    Int   @map("user_id")
   date      String   @map("date")  // YYYY-MM-DD（UTC）
-  callCount BigInt   @default(0) @map("call_count")
+  callCount Int   @default(0) @map("call_count")
   @@unique([userId, date])
   @@index([userId])
   @@map("open_api_call_stat")

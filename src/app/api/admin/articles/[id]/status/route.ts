@@ -12,7 +12,7 @@ const schema = z.object({ status: z.union([z.literal(0), z.literal(1), z.literal
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   return apiHandler(async () => {
     const admin = await requireAdmin();
-    const id = BigInt(params.id);
+    const id = Number(params.id);
     const { status } = schema.parse(await req.json().catch(() => ({})));
     const a = await prisma.article.update({
       where: { id },

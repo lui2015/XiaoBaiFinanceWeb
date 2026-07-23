@@ -15,7 +15,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const user = await getCurrentUser();
     if (!user) throw ApiErrors.unauthorized('请先登录');
 
-    const id = BigInt(params.id);
+    const id = Number(params.id);
     const key = await prisma.openApiKey.findUnique({ where: { id }, select: { userId: true } });
     if (!key) throw ApiErrors.notFound('密钥不存在');
     if (key.userId !== user.id) throw ApiErrors.forbidden('无权操作该密钥');

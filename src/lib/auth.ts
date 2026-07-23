@@ -19,7 +19,7 @@ export const AuthCookies = {
 // 仅在显式开启 HTTPS 时才给 Cookie 加 secure（HTTP 部署必须关闭，否则浏览器会丢弃 Cookie 导致“登录成功却未登录”）
 function cookieSecure() { return process.env.COOKIE_SECURE === 'true'; }
 
-export async function setUserSession(userId: bigint, nickname: string, ua?: string, ip?: string) {
+export async function setUserSession(userId: number, nickname: string, ua?: string, ip?: string) {
   const sub = String(userId);
   const at = await signAccess({ sub, sid: 'user', nick: nickname });
   const { token: rt, jti, expiresAt } = await signRefresh(sub, 'user');
@@ -30,7 +30,7 @@ export async function setUserSession(userId: bigint, nickname: string, ua?: stri
   return { at, rt };
 }
 
-export async function setAdminSession(adminId: bigint, role: number) {
+export async function setAdminSession(adminId: number, role: number) {
   const sub = String(adminId);
   const at = await signAccess({ sub, sid: 'admin', role });
   const { token: rt, expiresAt: _ea } = await signRefresh(sub, 'admin');
@@ -61,7 +61,7 @@ export async function getCurrentUser() {
   if (at) {
     const p = await verifyAccess(at);
     if (p && p.sid === 'user') {
-      const u = await prisma.user.findUnique({ where: { id: BigInt(p.sub) } });
+      const u = await prisma.user.findUnique({ where: { id: Number(p.sub) } });
       if (u && u.status === 0) return u;
     }
   }
@@ -72,7 +72,7 @@ export async function getCurrentUser() {
     if (p && p.sid === 'user') {
       const stored = await prisma.refreshToken.findUnique({ where: { jti: p.jti } });
       if (stored && !stored.revoked && stored.expiredAt > new Date()) {
-        const u = await prisma.user.findUnique({ where: { id: BigInt(p.sub) } });
+        const u = await prisma.user.findUnique({ where: { id: Number(p.sub) } });
         if (u && u.status === 0) {
           const newAt = await signAccess({ sub: p.sub, sid: 'user', nick: u.nickname });
           // 在服务端组件渲染阶段无法修改 Cookie，此时忽略「顺带刷新」，不影响返回用户
@@ -109,7 +109,7 @@ export async function getCurrentAdmin() {
   if (!at) return null;
   const p = await verifyAccess(at);
   if (!p || p.sid !== 'admin') return null;
-  const a = await prisma.adminUser.findUnique({ where: { id: BigInt(p.sub) } });
+  const a = await prisma.adminUser.findUnique({ where: { id: Number(p.sub) } });
   if (!a || a.status !== 1) return null;
   return a;
 }

@@ -63,7 +63,7 @@ async function main() {
     },
   });
 
-  let cursor: bigint | null = null;
+  let cursor: number | null = null;
   let total = 0;
   while (true) {
     const rows: any[] = await prisma.article.findMany({

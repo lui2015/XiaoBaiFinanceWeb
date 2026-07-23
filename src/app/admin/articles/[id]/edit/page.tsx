@@ -5,7 +5,7 @@ import ArticleEditor from '../../ArticleEditor';
 export const dynamic = 'force-dynamic';
 
 export default async function EditArticlePage({ params }: { params: { id: string } }) {
-  const a = await prisma.article.findUnique({ where: { id: BigInt(params.id) } });
+  const a = await prisma.article.findUnique({ where: { id: Number(params.id) } });
   if (!a) notFound();
   const cats = await prisma.category.findMany({ where: { status: 1 }, orderBy: { sortOrder: 'asc' } });
   const tree = cats.filter(c => !c.parentId).map(p => ({

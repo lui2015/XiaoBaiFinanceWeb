@@ -15,7 +15,7 @@ export default async function SearchPage({
   if (keyword) {
     result = await getSearch().search({
       keyword,
-      categoryId: searchParams.categoryId ? BigInt(searchParams.categoryId) : undefined,
+      categoryId: searchParams.categoryId ? Number(searchParams.categoryId) : undefined,
       page, size,
     });
     prisma.searchLog.create({ data: { keyword, resultCount: result.total } }).catch(() => {});

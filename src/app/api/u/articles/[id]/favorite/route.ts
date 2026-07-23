@@ -7,7 +7,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   return apiHandler(async () => {
     const u = await requireUser();
     if (!/^\d+$/.test(params.id)) throw ApiErrors.badRequest();
-    const articleId = BigInt(params.id);
+    const articleId = Number(params.id);
     if (!fixedWindow(`fav:${u.id}`, 10, 60)) throw ApiErrors.tooMany();
     const a = await prisma.article.findFirst({ where: { id: articleId, status: 1, deletedAt: null } });
     if (!a) throw ApiErrors.notFound('文章不存在');
@@ -25,7 +25,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   return apiHandler(async () => {
     const u = await requireUser();
     if (!/^\d+$/.test(params.id)) throw ApiErrors.badRequest();
-    const articleId = BigInt(params.id);
+    const articleId = Number(params.id);
     const r = await prisma.userFavorite.deleteMany({ where: { userId: u.id, articleId } });
     if (r.count > 0) {
       await prisma.article.update({ where: { id: articleId }, data: { favoriteCount: { decrement: 1 } } });

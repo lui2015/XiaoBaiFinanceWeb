@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return apiHandler(async () => {
     const admin = await requireAdmin();
     const { status } = schema.parse(await req.json().catch(() => ({})));
-    const id = BigInt(params.id);
+    const id = Number(params.id);
     await prisma.userFeedback.update({
       where: { id },
       data: { status, handlerId: admin.id, handledAt: new Date() },

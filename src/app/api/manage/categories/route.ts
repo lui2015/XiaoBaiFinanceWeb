@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       data: {
         name: body.name,
         slug,
-        parentId: body.parentId ? BigInt(body.parentId) : null,
+        parentId: body.parentId ? Number(body.parentId) : null,
         sortOrder: body.sortOrder ?? 0,
         status: 1,
       },

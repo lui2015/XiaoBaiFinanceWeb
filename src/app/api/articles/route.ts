@@ -22,8 +22,8 @@ export async function GET(req: NextRequest) {
     });
     const { page, size } = parsePage(sp);
     const where: any = { status: 1, deletedAt: null };
-    if (q.categoryId) where.categoryId = BigInt(q.categoryId);
-    if (q.subCategoryId) where.subCategoryId = BigInt(q.subCategoryId);
+    if (q.categoryId) where.categoryId = Number(q.categoryId);
+    if (q.subCategoryId) where.subCategoryId = Number(q.subCategoryId);
     if (q.recommend === '1') where.isRecommend = true;
     const orderBy = q.sort === 'hot' ? [{ viewCount: 'desc' as const }] : [{ publishAt: 'desc' as const }, { id: 'desc' as const }];
     const [list, total] = await Promise.all([

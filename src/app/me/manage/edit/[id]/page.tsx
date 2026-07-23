@@ -15,7 +15,7 @@ export default async function EditArticlePage({ params }: { params: { id: string
   let article;
   try {
     article = await prisma.article.findFirst({
-      where: { id: BigInt(params.id), deletedAt: null },
+      where: { id: Number(params.id), deletedAt: null },
     });
   } catch {
     notFound();
@@ -26,6 +26,8 @@ export default async function EditArticlePage({ params }: { params: { id: string
     orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
     select: { id: true, parentId: true, name: true, slug: true, sortOrder: true, status: true },
   });
+  const catsForClient = cats.map(c => ({ ...c, id: String(c.id), parentId: c.parentId ? String(c.parentId) : null }));
+  const articleForClient = { ...article, id: String(article.id), categoryId: String(article.categoryId), subCategoryId: article.subCategoryId ? String(article.subCategoryId) : null };
 
   return (
     <div className="mx-auto max-w-[900px] px-4 py-6">
@@ -33,7 +35,7 @@ export default async function EditArticlePage({ params }: { params: { id: string
         <h1 className="text-xl font-bold">编辑文章</h1>
         <Link href={`/article/${article.slug}`} className="text-sm text-brand-500">返回文章</Link>
       </div>
-      <ArticleEditClient categories={jsonSafe(cats)} article={jsonSafe(article)} />
+      <ArticleEditClient categories={jsonSafe(catsForClient)} article={jsonSafe(articleForClient)} />
     </div>
   );
 }

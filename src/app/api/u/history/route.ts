@@ -30,7 +30,7 @@ export async function DELETE(req: NextRequest) {
     const u = await requireUser();
     const id = req.nextUrl.searchParams.get('articleId');
     if (id) {
-      await prisma.userHistory.deleteMany({ where: { userId: u.id, articleId: BigInt(id) } });
+      await prisma.userHistory.deleteMany({ where: { userId: u.id, articleId: Number(id) } });
     } else {
       await prisma.userHistory.deleteMany({ where: { userId: u.id } });
     }
@@ -52,9 +52,9 @@ export async function POST(req: NextRequest) {
     const body = syncSchema.parse(await req.json().catch(() => ({})));
     for (const it of body.items) {
       await prisma.userHistory.upsert({
-        where: { userId_articleId: { userId: u.id, articleId: BigInt(it.articleId) } },
+        where: { userId_articleId: { userId: u.id, articleId: Number(it.articleId) } },
         update: { viewedAt: it.viewedAt ? new Date(it.viewedAt) : new Date() },
-        create: { userId: u.id, articleId: BigInt(it.articleId), viewedAt: it.viewedAt ? new Date(it.viewedAt) : new Date() },
+        create: { userId: u.id, articleId: Number(it.articleId), viewedAt: it.viewedAt ? new Date(it.viewedAt) : new Date() },
       });
     }
     // 仅保留最近 200 条

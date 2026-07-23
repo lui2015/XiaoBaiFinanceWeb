@@ -19,16 +19,16 @@ export interface SearchResult {
 }
 
 export interface SearchService {
-  search(opts: { keyword: string; categoryId?: bigint; page: number; size: number }): Promise<SearchResult>;
-  upsertArticle(id: bigint): Promise<void>;
-  removeArticle(id: bigint): Promise<void>;
+  search(opts: { keyword: string; categoryId?: number; page: number; size: number }): Promise<SearchResult>;
+  upsertArticle(id: number): Promise<void>;
+  removeArticle(id: number): Promise<void>;
 }
 
 /** 内存搜索：适用于 SQLite 单机场景，全部文章加载到内存做模糊匹配 */
 class MemorySearch implements SearchService {
   private cache: Array<{
-    id: bigint; title: string; summary: string; slug: string;
-    categoryId: bigint; publishAt: Date | null; deletedAt?: Date | null; status: number;
+    id: number; title: string; summary: string | null; slug: string;
+    categoryId: number; publishAt: Date | null; deletedAt?: Date | null; status: number;
   }> | null = null;
   private cacheTs = 0;
   private readonly CACHE_TTL = 5_000; // 5 秒缓存
@@ -63,7 +63,7 @@ class MemorySearch implements SearchService {
     };
   }
 
-  async search({ keyword, categoryId, page, size }: { keyword: string; categoryId?: bigint; page: number; size: number }) {
+  async search({ keyword, categoryId, page, size }: { keyword: string; categoryId?: number; page: number; size: number }) {
     await this.loadCache();
     let results = (this.cache || []).filter(a => a.status === 1 && !a.deletedAt);
     if (categoryId) results = results.filter(a => a.categoryId === Number(categoryId));
@@ -78,8 +78,8 @@ class MemorySearch implements SearchService {
     const total = results.length;
     const offset = (page - 1) * size;
     const list = results.slice(offset, offset + size).map(r => ({
-      id: r.id, title: r.title, summary: r.summary || '', slug: r.slug,
-      categoryId: r.categoryId, publishAt: r.publishAt ? new Date(r.publishAt).toISOString() : null,
+      id: String(r.id), title: r.title, summary: r.summary || '', slug: r.slug,
+      categoryId: String(r.categoryId), publishAt: r.publishAt ? new Date(r.publishAt).toISOString() : null,
       highlight: this.match(r, keyword)?.highlight,
     })) as SearchHit[];
     return { total, list };
@@ -100,7 +100,7 @@ class ESSearch implements SearchService {
     });
     return this.client;
   }
-  async search({ keyword, categoryId, page, size }: { keyword: string; categoryId?: bigint; page: number; size: number }) {
+  async search({ keyword, categoryId, page, size }: { keyword: string; categoryId?: number; page: number; size: number }) {
     const c = await this.getClient();
     const must: any[] = [
       { multi_match: { query: keyword, fields: ['title^3', 'summary^2', 'content_text'] } },
@@ -126,7 +126,7 @@ class ESSearch implements SearchService {
     }));
     return { total: resp.hits.total.value, list };
   }
-  async upsertArticle(id: bigint) {
+  async upsertArticle(id: number) {
     const c = await this.getClient();
     const a = await prisma.article.findUnique({ where: { id } });
     if (!a) return;
@@ -144,7 +144,7 @@ class ESSearch implements SearchService {
       },
     });
   }
-  async removeArticle(id: bigint) {
+  async removeArticle(id: number) {
     const c = await this.getClient();
     await c.delete({ index: this.index, id: String(id) }).catch(() => {});
   }

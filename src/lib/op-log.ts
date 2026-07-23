@@ -2,10 +2,10 @@
 import { prisma } from './prisma';
 
 export async function writeOpLog(p: {
-  adminId: bigint;
+  adminId: number;
   action: string;
   targetType?: string;
-  targetId?: string | bigint;
+  targetId?: string | number;
   payload?: unknown;
   ip?: string;
   ua?: string;

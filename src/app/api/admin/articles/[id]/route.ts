@@ -28,7 +28,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   return apiHandler(async () => {
     await requireAdmin();
     const a = await prisma.article.findUnique({
-      where: { id: BigInt(params.id) },
+      where: { id: Number(params.id) },
       include: { tags: { include: { tag: true } } },
     });
     if (!a) throw ApiErrors.notFound();
@@ -39,13 +39,13 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   return apiHandler(async () => {
     const admin = await requireAdmin();
-    const id = BigInt(params.id);
+    const id = Number(params.id);
     const body = updateSchema.parse(await req.json().catch(() => ({})));
     const data: any = {};
     if (body.title) data.title = body.title;
     if (body.summary !== undefined) data.summary = body.summary;
-    if (body.categoryId) data.categoryId = BigInt(body.categoryId);
-    if ('subCategoryId' in body) data.subCategoryId = body.subCategoryId ? BigInt(body.subCategoryId) : null;
+    if (body.categoryId) data.categoryId = Number(body.categoryId);
+    if ('subCategoryId' in body) data.subCategoryId = body.subCategoryId ? Number(body.subCategoryId) : null;
     if ('coverUrl' in body) data.coverUrl = body.coverUrl;
     if (body.isRecommend !== undefined) data.isRecommend = body.isRecommend;
     if ('scheduledAt' in body) data.scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null;
@@ -74,7 +74,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   return apiHandler(async () => {
     const admin = await requireAdmin();
-    const id = BigInt(params.id);
+    const id = Number(params.id);
     await prisma.article.update({ where: { id }, data: { deletedAt: new Date(), status: 2 } });
     await getSearch().removeArticle(id);
     await writeOpLog({ adminId: admin.id, action: 'article.delete', targetType: 'article', targetId: id, ip: getClientIp(req) });

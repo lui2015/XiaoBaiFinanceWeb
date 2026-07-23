@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const { page, size } = parsePage(sp);
     const result = await getSearch().search({
       keyword: q.keyword,
-      categoryId: q.categoryId ? BigInt(q.categoryId) : undefined,
+      categoryId: q.categoryId ? Number(q.categoryId) : undefined,
       page, size,
     });
     // 异步写搜索日志（不影响响应）

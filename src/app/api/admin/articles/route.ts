@@ -78,8 +78,8 @@ export async function POST(req: NextRequest) {
         contentHtml: html,
         contentText: text,
         contentMd: body.sourceType === 1 ? body.contentMd : null,
-        categoryId: BigInt(body.categoryId),
-        subCategoryId: body.subCategoryId ? BigInt(body.subCategoryId) : null,
+        categoryId: Number(body.categoryId),
+        subCategoryId: body.subCategoryId ? Number(body.subCategoryId) : null,
         coverUrl: body.coverUrl,
         status: body.scheduledAt ? 0 : body.status,
         isRecommend: body.isRecommend ?? false,
@@ -90,8 +90,7 @@ export async function POST(req: NextRequest) {
     });
     if (body.tagIds?.length) {
       await prisma.articleTag.createMany({
-        data: body.tagIds.map(t => ({ articleId: a.id, tagId: BigInt(t) })),
-        skipDuplicates: true,
+        data: [...new Set(body.tagIds)].map(t => ({ articleId: a.id, tagId: Number(t) })),
       });
     }
     if (a.status === 1) await getSearch().upsertArticle(a.id);

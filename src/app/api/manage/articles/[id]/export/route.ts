@@ -81,7 +81,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   try {
     await requireManager();
     const a = await prisma.article.findFirst({
-      where: { id: BigInt(params.id), deletedAt: null },
+      where: { id: Number(params.id), deletedAt: null },
       include: {
         category: { select: { name: true } },
         subCategory: { select: { name: true } },

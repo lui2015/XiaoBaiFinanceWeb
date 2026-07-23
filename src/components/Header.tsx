@@ -13,6 +13,7 @@ export default async function Header() {
     }),
     getCurrentUser(),
   ]);
+  const categories = cats.map(c => ({ ...c, id: String(c.id) }));
   return (
     <header className="bg-cream border-b-2 border-ink sticky top-0 z-30">
       <div className="mx-auto max-w-[1200px] px-4 h-16 flex items-center gap-6">
@@ -24,7 +25,7 @@ export default async function Header() {
           </span>
         </Link>
         <HeaderNav
-          categories={jsonSafe(cats)}
+          categories={jsonSafe(categories)}
           user={user ? { id: String(user.id), nickname: user.nickname, avatarUrl: user.avatarUrl, isAdmin: !!user.isAdmin } : null}
         />
       </div>

@@ -14,7 +14,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   return apiHandler(async () => {
     await requireManager();
     const body = schema.parse(await req.json().catch(() => ({})));
-    await prisma.category.update({ where: { id: BigInt(params.id) }, data: body });
+    await prisma.category.update({ where: { id: Number(params.id) }, data: body });
     return jsonSafe({ ok: true });
   });
 }
@@ -22,7 +22,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   return apiHandler(async () => {
     await requireManager();
-    const id = BigInt(params.id);
+    const id = Number(params.id);
     const childCnt = await prisma.category.count({ where: { parentId: id } });
     if (childCnt > 0) throw ApiErrors.conflict('该分类下仍有子分类，无法删除');
     const artCnt = await prisma.article.count({ where: { OR: [{ categoryId: id }, { subCategoryId: id }] } });

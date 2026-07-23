@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     const adminId = sp.get('adminId');
     const action = sp.get('action');
     const where: any = {};
-    if (adminId) where.adminId = BigInt(adminId);
+    if (adminId) where.adminId = Number(adminId);
     if (action) where.action = action;
     const [list, total] = await Promise.all([
       prisma.operationLog.findMany({ where, orderBy: { id: 'desc' }, take: size, skip: (page - 1) * size }),
