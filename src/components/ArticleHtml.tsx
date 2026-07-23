@@ -52,10 +52,10 @@ const PROBE = `<script>(function(){var _t=null;function m(){var de=document.docu
 
 const BASE_TAG = '<base target="_blank">';
 
-// 关键：中和内容里 html/body 的 height/min-height（如 min-height:100vh）。
+// 关键：中和内容里所有可能的视口相对高度（如 min-height:100vh）。
 // 在 iframe 中 100vh = iframe 自身高度，会与探针上报的高度耦合成循环，
-// 导致高度不稳定（越滚越大 / 展示不全）。解耦后 body 高度纯由内容决定。
-const HEIGHT_RESET = `<style>html,body{height:auto!important;min-height:0!important}</style>`;
+// 导致高度不稳定（越滚越大 / 展示不全）。解耦后所有元素高度纯由内容决定。
+const HEIGHT_RESET = `<style>html,body{height:auto!important;min-height:0!important;max-height:none!important}*{min-height:0!important;height:auto!important}</style>`;
 
 const FRAGMENT_STYLE = `<style>html,body{margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;color:#1f2937;line-height:1.85;font-size:16px;padding:4px;word-break:break-word}img{max-width:100%;height:auto}table{border-collapse:collapse;max-width:100%}</style>`;
 
