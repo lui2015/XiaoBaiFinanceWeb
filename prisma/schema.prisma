@@ -53,6 +53,7 @@ model Article {
   likeCount       Int       @default(0) @map("like_count")
   favoriteCount   Int       @default(0) @map("favorite_count")
   authorAdminId   BigInt?   @map("author_admin_id")
+  createdBy       Int       @default(0) @map("created_by")  // 0 人工创建  1 API 创建
   publishAt       DateTime? @map("publish_at")
   scheduledAt     DateTime? @map("scheduled_at") // 定时发布
   createdAt       DateTime  @default(now()) @map("created_at")

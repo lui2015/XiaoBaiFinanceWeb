@@ -1,32 +1,6 @@
-# 生产部署 compose（与开发用 docker-compose.yml 区分）
-# 仅 MySQL 监听 127.0.0.1:3306，App 通过 docker network 连 mysql
+# 生产部署 compose（SQLite 版，无需独立数据库）
+# 数据存于容器卷 app_data（/app/data/xiaobai.db），App 直接读写
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: xb_mysql
-    restart: unless-stopped
-    env_file:
-      - .env.production
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-xiaobai_finance}
-      TZ: Asia/Shanghai
-    command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_0900_ai_ci
-      - --innodb-ft-min-token-size=1
-      - --ngram-token-size=2
-    ports:
-      - "127.0.0.1:3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-    networks: [xb_net]
-
   app:
     build:
       context: .
@@ -34,19 +8,17 @@ services:
     image: xiaobai-finance-web:latest
     container_name: xb_app
     restart: unless-stopped
-    depends_on:
-      mysql:
-        condition: service_healthy
     env_file:
       - .env.production
     ports:
       - "8095:8093"
     volumes:
+      - app_data:/app/data
       - app_uploads:/app/uploads
     networks: [xb_net]
 
 volumes:
-  mysql_data: {}
+  app_data: {}
   app_uploads: {}
 
 networks:

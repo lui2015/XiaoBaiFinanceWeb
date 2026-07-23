@@ -30,6 +30,39 @@ async function uniqueSlug(title: string) {
   return slug;
 }
 
+export async function GET(req: NextRequest) {
+  return apiHandler(async () => {
+    await requireManager();
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
+    const pageSize = Math.min(50, Math.max(1, parseInt(searchParams.get('pageSize') || '10', 10) || 10));
+    const keyword = (searchParams.get('keyword') || '').trim();
+    const statusParam = searchParams.get('status');
+
+    const where: any = { deletedAt: null };
+    if (keyword) where.title = { contains: keyword };
+    if (statusParam && /^[012]$/.test(statusParam)) where.status = parseInt(statusParam, 10);
+
+    const [total, rows] = await Promise.all([
+      prisma.article.count({ where }),
+      prisma.article.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true, title: true, slug: true, status: true, viewCount: true,
+          coverUrl: true, createdAt: true, publishAt: true, createdBy: true,
+          category: { select: { name: true } },
+          subCategory: { select: { name: true } },
+        },
+      }),
+    ]);
+
+    return jsonSafe({ list: rows, total, page, pageSize });
+  });
+}
+
 export async function POST(req: NextRequest) {
   return apiHandler(async () => {
     await requireManager();

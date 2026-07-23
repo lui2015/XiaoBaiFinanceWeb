@@ -16,7 +16,8 @@ export const AuthCookies = {
   admin: { at: COOKIE_ADMIN_AT, rt: COOKIE_ADMIN_RT },
 };
 
-function isProd() { return process.env.NODE_ENV === 'production'; }
+// 仅在显式开启 HTTPS 时才给 Cookie 加 secure（HTTP 部署必须关闭，否则浏览器会丢弃 Cookie 导致“登录成功却未登录”）
+function cookieSecure() { return process.env.COOKIE_SECURE === 'true'; }
 
 export async function setUserSession(userId: bigint, nickname: string, ua?: string, ip?: string) {
   const sub = String(userId);
@@ -24,8 +25,8 @@ export async function setUserSession(userId: bigint, nickname: string, ua?: stri
   const { token: rt, jti, expiresAt } = await signRefresh(sub, 'user');
   await prisma.refreshToken.create({ data: { userId, jti, ua, ip, expiredAt: expiresAt } });
   const c = cookies();
-  c.set(COOKIE_USER_AT, at, { httpOnly: true, secure: isProd(), sameSite: 'lax', path: '/', maxAge: TOKEN_TTL.access });
-  c.set(COOKIE_USER_RT, rt, { httpOnly: true, secure: isProd(), sameSite: 'lax', path: '/', maxAge: TOKEN_TTL.refresh });
+  c.set(COOKIE_USER_AT, at, { httpOnly: true, secure: cookieSecure(), sameSite: 'lax', path: '/', maxAge: TOKEN_TTL.access });
+  c.set(COOKIE_USER_RT, rt, { httpOnly: true, secure: cookieSecure(), sameSite: 'lax', path: '/', maxAge: TOKEN_TTL.refresh });
   return { at, rt };
 }
 
@@ -35,8 +36,8 @@ export async function setAdminSession(adminId: bigint, role: number) {
   const { token: rt, expiresAt: _ea } = await signRefresh(sub, 'admin');
   void _ea;
   const c = cookies();
-  c.set(COOKIE_ADMIN_AT, at, { httpOnly: true, secure: isProd(), sameSite: 'lax', path: '/', maxAge: TOKEN_TTL.access });
-  c.set(COOKIE_ADMIN_RT, rt, { httpOnly: true, secure: isProd(), sameSite: 'lax', path: '/', maxAge: TOKEN_TTL.refresh });
+  c.set(COOKIE_ADMIN_AT, at, { httpOnly: true, secure: cookieSecure(), sameSite: 'lax', path: '/', maxAge: TOKEN_TTL.access });
+  c.set(COOKIE_ADMIN_RT, rt, { httpOnly: true, secure: cookieSecure(), sameSite: 'lax', path: '/', maxAge: TOKEN_TTL.refresh });
   return { at, rt };
 }
 
@@ -76,7 +77,7 @@ export async function getCurrentUser() {
           const newAt = await signAccess({ sub: p.sub, sid: 'user', nick: u.nickname });
           // 在服务端组件渲染阶段无法修改 Cookie，此时忽略「顺带刷新」，不影响返回用户
           try {
-            c.set(COOKIE_USER_AT, newAt, { httpOnly: true, secure: isProd(), sameSite: 'lax', path: '/', maxAge: TOKEN_TTL.access });
+            c.set(COOKIE_USER_AT, newAt, { httpOnly: true, secure: cookieSecure(), sameSite: 'lax', path: '/', maxAge: TOKEN_TTL.access });
           } catch {
             // ignore: cookies can only be modified in a Server Action or Route Handler
           }

@@ -1,122 +1,90 @@
-/**
- * 开放平台投稿接口
- * POST /api/open/articles
- *
- * 鉴权：需要开放平台 API Key（在「设置-开放平台」中生成）。
- *   通过 Authorization: Bearer <key> 或 x-api-key: <key> 携带。
- *   每次成功调用都会计入该用户「当日 / 累计」调用次数。
- * 行为：投稿内容经安全净化后「直接发布」（status=1），无需人工审核即对外可见。
- * 安全策略：
- *  - 内容强制净化（防 XSS）；
- *  - 按来源 IP + API Key 双重限流；
- *  - 分类必须存在且启用；
- *  - slug 冲突自动追加随机后缀，避免因重名报错。
- */
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import crypto from 'node:crypto';
 import { prisma } from '@/lib/prisma';
-import { apiHandler, ApiErrors, jsonSafe } from '@/lib/api';
+import { ApiErrors, jsonSafe } from '@/lib/api';
 import { sanitizeRichHtml, markdownToSanitizedHtml, htmlToText } from '@/lib/sanitize';
-import { slugify, getClientIp, getUA, Reg } from '@/lib/utils';
-import { fixedWindow } from '@/lib/rate-limit';
+import { slugify } from '@/lib/utils';
 import { getSearch } from '@/lib/search';
-import { resolveOpenApiKey, recordOpenApiCall } from '@/lib/open-api';
+import { readStats, todayKey, STATS_FILE } from '@/lib/openStats';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const schema = z.object({
+  title: z.string().min(2).max(60),
+  summary: z.string().max(120).optional(),
+  categoryId: z.string().regex(/^\d+$/),
+  subCategoryId: z.string().regex(/^\d+$/).optional(),
+  coverUrl: z.string().url().optional(),
+  status: z.union([z.literal(0), z.literal(1)]).default(1),
+  sourceType: z.union([z.literal(0), z.literal(1)]).default(0),
+  contentHtml: z.string().optional(),
+  contentMd: z.string().optional(),
+});
 
-const submitSchema = z
-  .object({
-    title: z.string().min(2).max(60),
-    slug: z.string().regex(Reg.slug).optional(),
-    summary: z.string().max(120).optional(),
-    coverUrl: z.string().url().max(255).optional(),
-    // 分类：id 或 slug 二选一
-    categoryId: z.string().regex(/^\d+$/).optional(),
-    categorySlug: z.string().max(60).optional(),
-    subCategoryId: z.string().regex(/^\d+$/).optional(),
-    // 0 = HTML（默认），1 = Markdown
-    sourceType: z.union([z.literal(0), z.literal(1)]).default(0),
-    contentHtml: z.string().max(200_000).optional(),
-    contentMd: z.string().max(200_000).optional(),
-    // 标签名称（非 id），最多 5 个，服务端自动创建
-    tags: z.array(z.string().min(1).max(40)).max(5).optional(),
-  })
-  .refine((d) => !!d.categoryId || !!d.categorySlug, {
-    message: '需要提供 categoryId 或 categorySlug',
-    path: ['categoryId'],
-  });
-
-/** 生成唯一 slug：优先使用入参，冲突时追加短随机后缀。 */
-async function ensureUniqueSlug(base: string): Promise<string> {
+async function uniqueSlug(title: string) {
+  let base = slugify(title);
   let slug = base;
-  for (let i = 0; i < 5; i++) {
-    const exist = await prisma.article.findUnique({ where: { slug }, select: { id: true } });
-    if (!exist) return slug;
-    const suffix = crypto.randomBytes(3).toString('hex');
-    slug = `${base.slice(0, 52)}-${suffix}`;
+  let i = 1;
+  while (await prisma.article.findUnique({ where: { slug } })) {
+    slug = `${base}-${i++}`;
   }
-  // 极端兜底
-  return `${base.slice(0, 44)}-${Date.now().toString(36)}`;
+  return slug;
+}
+
+/* ============ 调用统计（文件持久化） ============ */
+async function bumpStats() {
+  const fs = await import('fs/promises');
+  const stats = await readStats();
+  const day = todayKey();
+  stats.total = (stats.total || 0) + 1;
+  stats.daily = stats.daily || {};
+  stats.daily[day] = (stats.daily[day] || 0) + 1;
+  await fs.mkdir(STATS_FILE.replace(/\/[^/]+$/, ''), { recursive: true }).catch(() => {});
+  await fs.writeFile(STATS_FILE, JSON.stringify(stats), 'utf-8');
+}
+
+/** 从环境变量或文件读取合法 API Key 列表 */
+async function getValidKeys(): Promise<Set<string>> {
+  const envKey = process.env.OPEN_API_KEY;
+  const keys = new Set<string>();
+  if (envKey) keys.add(envKey.trim());
+  // 也支持从 data/open-api-keys.txt 每行一个 key
+  try {
+    const fs = await import('fs/promises');
+    const raw = await fs.readFile('/app/data/open-api-keys.txt', 'utf-8').catch(() => '');
+    raw.split('\n').map(l => l.trim()).filter(Boolean).forEach(k => keys.add(k));
+  } catch { /* ignore */ }
+  return keys;
 }
 
 export async function POST(req: NextRequest) {
-  return apiHandler(async () => {
-    const ip = getClientIp(req);
-
-    // 开放平台鉴权：解析并校验 API Key（无效/停用 -> 401）
-    const key = await resolveOpenApiKey(req);
-
-    // 双重限流：来源 IP + API Key
-    if (!fixedWindow(`open:submit:ip:${ip}`, 20, 60)) {
-      throw ApiErrors.tooMany('提交过于频繁，请稍后再试');
+  try {
+    // 鉴权：Bearer token 或 query param ?key=xxx
+    let key = '';
+    const auth = req.headers.get('authorization') || '';
+    const m = auth.match(/^Bearer\s+(.+)$/i);
+    if (m) key = m[1].trim();
+    if (!key) key = new URL(req.url).searchParams.get('key') || '';
+    if (!key) {
+      return NextResponse.json({ code: 401, message: '缺少 API Key，请在 Header 中携带 Authorization: Bearer <key> 或参数?key=<key>' }, { status: 401 });
     }
-    if (!fixedWindow(`open:submit:key:${key.id}`, 60, 60)) {
-      throw ApiErrors.tooMany('该密钥调用过于频繁，请稍后再试');
-    }
-
-    const body = submitSchema.parse(await req.json().catch(() => ({})));
-
-    // 解析并校验分类
-    let categoryId: bigint;
-    if (body.categoryId) {
-      const cat = await prisma.category.findUnique({ where: { id: BigInt(body.categoryId) }, select: { id: true, status: true } });
-      if (!cat || cat.status !== 1) throw ApiErrors.badRequest('分类不存在或未启用');
-      categoryId = cat.id;
-    } else {
-      const cat = await prisma.category.findUnique({ where: { slug: body.categorySlug! }, select: { id: true, status: true } });
-      if (!cat || cat.status !== 1) throw ApiErrors.badRequest('分类不存在或未启用');
-      categoryId = cat.id;
+    const validKeys = await getValidKeys();
+    if (!validKeys.has(key)) {
+      return NextResponse.json({ code: 403, message: 'API Key 无效' }, { status: 403 });
     }
 
-    let subCategoryId: bigint | null = null;
-    if (body.subCategoryId) {
-      const sub = await prisma.category.findUnique({ where: { id: BigInt(body.subCategoryId) }, select: { id: true, status: true } });
-      if (!sub || sub.status !== 1) throw ApiErrors.badRequest('子分类不存在或未启用');
-      subCategoryId = sub.id;
-    }
-
-    // 内容净化
+    const body = schema.parse(await req.json().catch(() => ({})));
     let html = '';
     if (body.sourceType === 1) {
       if (!body.contentMd) throw ApiErrors.badRequest('contentMd 必填');
       html = markdownToSanitizedHtml(body.contentMd);
     } else {
       if (!body.contentHtml) throw ApiErrors.badRequest('contentHtml 必填');
-      // 与前台「我的-管理」上传路径一致：使用 sanitizeRichHtml「原样保留」原始 HTML
-      // 格式（<style>/内联 style/class/布局标签/表格等），仅剔除 XSS 危险内容
-      // （<script>、on* 事件、javascript:/vbscript:/data:text/html）。
-      // 渲染侧对 sourceType=0 用 sandbox iframe（无 allow-same-origin）隔离，形成纵深防御。
       html = sanitizeRichHtml(body.contentHtml);
     }
     const text = htmlToText(html);
-    if (!text.trim()) throw ApiErrors.badRequest('正文内容为空或被安全过滤');
-
-    const slug = await ensureUniqueSlug(body.slug || slugify(body.title));
+    if (!text.trim()) throw ApiErrors.badRequest('内容为空或被全部净化');
+    const slug = await uniqueSlug(body.title);
     const summary = body.summary || text.slice(0, 120);
-
-    const article = await prisma.article.create({
+    const a = await prisma.article.create({
       data: {
         title: body.title,
         slug,
@@ -125,67 +93,51 @@ export async function POST(req: NextRequest) {
         contentHtml: html,
         contentText: text,
         contentMd: body.sourceType === 1 ? body.contentMd : null,
-        categoryId,
-        subCategoryId,
+        categoryId: BigInt(body.categoryId),
+        subCategoryId: body.subCategoryId ? BigInt(body.subCategoryId) : null,
         coverUrl: body.coverUrl,
-        status: 1, // 对外投稿直接发布
-        publishAt: new Date(),
-        isRecommend: false,
-        authorAdminId: null,
-      },
-      select: { id: true, slug: true, status: true },
-    });
-
-    // 处理标签（名称 -> upsert）
-    if (body.tags?.length) {
-      const uniqueNames = Array.from(new Set(body.tags.map((t) => t.trim()).filter(Boolean)));
-      for (const name of uniqueNames) {
-        const tag = await prisma.tag.upsert({
-          where: { name },
-          update: {},
-          create: { name, slug: slugify(name) },
-          select: { id: true },
-        });
-        await prisma.articleTag.createMany({
-          data: [{ articleId: article.id, tagId: tag.id }],
-          skipDuplicates: true,
-        });
-      }
-    }
-
-    // 审计留痕（记录开放平台用户与密钥）
-    await prisma.operationLog.create({
-      data: {
-        action: 'open.article.submit',
-        targetType: 'article',
-        targetId: String(article.id),
-        payload: JSON.stringify({
-          source: 'open-api',
-          keyId: String(key.id),
-          userId: String(key.userId),
-          title: body.title,
-          published: true,
-        }),
-        ip,
-        ua: getUA(req),
+        status: body.status,
+        createdBy: 1,
+        publishAt: body.status === 1 ? new Date() : null,
       },
     });
-
-    // 计入开放平台调用统计（当日 + 累计）
-    await recordOpenApiCall(key.userId, key.id);
-
-    // 已发布：同步搜索索引（失败不阻断发布）
-    try {
-      await getSearch().upsertArticle(article.id);
-    } catch {
-      /* 搜索索引失败不影响文章发布 */
+    if (a.status === 1) {
+      try { await getSearch().upsertArticle(a.id); } catch { /* no-op */ }
     }
+    try { await bumpStats(); } catch { /* 统计失败不阻断主流程 */ }
+    return NextResponse.json({ code: 0, data: { id: String(a.id), slug: a.slug }, message: 'ok' });
+  } catch (e: any) {
+    if (e.name === 'ZodError') {
+      return NextResponse.json({ code: 400, message: '参数错误', details: e.errors }, { status: 400 });
+    }
+    if (e?.code && typeof e.message === 'string') {
+      return NextResponse.json({ code: e.code, message: e.message }, { status: e.code >= 400 && e.code < 600 ? e.code : 500 });
+    }
+    return NextResponse.json({ code: 500, message: '服务器内部错误' }, { status: 500 });
+  }
+}
 
-    return jsonSafe({
-      id: String(article.id),
-      slug: article.slug,
-      status: article.status, // 1 = 已发布
-      message: '投稿已发布',
-    });
+/** GET 返回接口使用说明（供 AI / 开发者参考） */
+export async function GET() {
+  return NextResponse.json({
+    code: 0,
+    data: {
+      name: '小白理财开放接口',
+      version: 'v1',
+      endpoint: '/api/open/articles',
+      method: 'POST',
+      auth: 'Bearer Token（API Key）',
+      fields: [
+        { name: 'title', type: 'string', required: true, desc: '标题，2-60字' },
+        { name: 'summary', type: 'string', required: false, desc: '摘要，≤120字' },
+        { name: 'categoryId', type: 'string', required: true, desc: '分类 ID（数字字符串）' },
+        { name: 'subCategoryId', type: 'string', required: false, desc: '子分类 ID' },
+        { name: 'coverUrl', type: 'string', required: false, desc: '封面图 URL' },
+        { name: 'status', type: 'number', required: false, default: 1, desc: '0 草稿 / 1 发布' },
+        { name: 'sourceType', type: 'number', required: false, default: 0, desc: '0 HTML / 1 Markdown' },
+        { name: 'contentHtml', type: 'string', required: false, desc: 'HTML 正文（sourceType=0 时必填）' },
+        { name: 'contentMd', type: 'string', required: false, desc: 'Markdown 正文（sourceType=1 时必填）' },
+      ],
+    },
   });
 }
