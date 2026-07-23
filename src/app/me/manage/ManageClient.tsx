@@ -510,7 +510,7 @@ function ArticleList({ cats, onSaved }: { cats: Cat[]; onSaved: () => void }) {
                 return (
                   <tr key={row.id} className="border-t border-ink/10 hover:bg-cream/30">
                     <td className="px-4 py-3">
-                      <div className="font-semibold line-clamp-1 max-w-[320px]">{row.title}</div>
+                      <div className="font-semibold">{row.title}</div>
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-ink/70">
                       {row.category?.name || '-'}{row.subCategory?.name ? ` / ${row.subCategory.name}` : ''}
