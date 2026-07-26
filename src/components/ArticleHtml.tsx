@@ -6,15 +6,22 @@ import { useEffect, useRef, useState } from 'react';
  * - 完整保留原文档的 <style>、内联样式与布局，且与站点样式互不干扰。
  * - sandbox 仅授予 allow-scripts / allow-popups（不含 allow-same-origin），
  *   使内容处于「隔离来源」，无法访问站点 Cookie/DOM，脚本已在入库时剔除，形成纵深防御。
- * - 通过内置探针脚本上报内容高度实现自适应（仅防抖）。
+ * - 通过内置探针脚本上报内容高度实现自适应。
  *
- * 底部空白增大根因：内容 HTML 中 body/html 设了 min-height:100vh，
- * 导致 scrollHeight = iframe 自身高度 → 探针上报 → iframe 变高 → 循环放大。
- * 修复：仅重置 html/body 的视口高度属性，完全保留内容内部布局不变。
+ * 底部空白「逐步拉大」根因是一个正反馈循环：
+ *   探针测量 documentElement.scrollHeight（会被 iframe 外壳高度回灌）→ 上报 →
+ *   父组件把 iframe 设更高 → 内容 html 被拉伸到新视口高 → ResizeObserver 再次触发 →
+ *   测到更大的值 → 循环单调放大。
+ * 根治方案：
+ *   1) 探针测量前先把 documentElement 高度归零，再取 body.scrollHeight 作为
+ *      「内容真实高度」，彻底切断 iframe 外壳高度对测量值的回灌；只观察 body。
+ *   2) 父组件仅在新高度与当前高度「差异显著」（>=2px）时才更新，避免亚像素抖动
+ *      导致的持续增长。
  */
 export default function ArticleHtml({ html, className }: { html: string; className?: string }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(480);
+  const heightRef = useRef(480);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -22,10 +29,14 @@ export default function ArticleHtml({ html, className }: { html: string; classNa
       if (ref.current && e.source !== ref.current.contentWindow) return;
       const d = e.data;
       if (d && d.type === 'xbf-article-height' && typeof d.height === 'number') {
-        const h = Math.max(200, Math.ceil(d.height) + 4);
-        // 纯防抖：合并短时间多次上报为一次更新
+        const next = Math.max(200, Math.ceil(d.height) + 4);
+        // 差异小于 2px 视为噪声，忽略；避免亚像素抖动触发无谓更新与循环放大。
+        if (Math.abs(next - heightRef.current) < 2) return;
         if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => setHeight(h), 120);
+        timerRef.current = setTimeout(() => {
+          heightRef.current = next;
+          setHeight(next);
+        }, 120);
       }
     }
     window.addEventListener('message', onMsg);
@@ -52,12 +63,16 @@ export default function ArticleHtml({ html, className }: { html: string; classNa
   );
 }
 
-const PROBE = `<script>(function(){var _t=null;function m(){var de=document.documentElement,b=document.body;return Math.max(de?de.scrollHeight:0,de?de.offsetHeight:0,b?b.scrollHeight:0,b?b.offsetHeight:0)}function r(){if(_t)return;_t=setTimeout(function(){_t=null;try{parent.postMessage({type:'xbf-article-height',height:m()},'*')}catch(e){}},80)}window.addEventListener('load',r);window.addEventListener('resize',r);if(window.ResizeObserver){try{new ResizeObserver(r).observe(document.body||document.documentElement)}catch(e){}}document.addEventListener('DOMContentLoaded',r);var imgs=document.images||[];for(var i=0;i<imgs.length;i++){imgs[i].addEventListener('load',r);imgs[i].addEventListener('error',r)}window.addEventListener('message',function(e){var d=e.data;if(d&&d.type==='xbf-scroll-to'){var el=document.getElementById(d.id);if(el){el.scrollIntoView({behavior:'smooth',block:'start'})}}});setTimeout(r,300);setTimeout(r,1000);setTimeout(r,2500)})();<\/script>`;
+// 高度探针：
+// - measure() 先把 <html> 高度临时归零，切断 iframe 外壳高度回灌，
+//   再取 body.scrollHeight（内容真实高度），随后恢复，避免闪烁。
+// - 只对 body 使用 ResizeObserver，避免外壳变化自触发。
+const PROBE = `<script>(function(){var _t=null;function measure(){var de=document.documentElement,b=document.body;if(!b)return de?de.scrollHeight:0;var prev=de.style.height;de.style.height='0px';var h=b.scrollHeight;de.style.height=prev;return h}function r(){if(_t)return;_t=setTimeout(function(){_t=null;try{parent.postMessage({type:'xbf-article-height',height:measure()},'*')}catch(e){}},80)}window.addEventListener('load',r);window.addEventListener('resize',r);if(window.ResizeObserver){try{new ResizeObserver(r).observe(document.body||document.documentElement)}catch(e){}}document.addEventListener('DOMContentLoaded',r);var imgs=document.images||[];for(var i=0;i<imgs.length;i++){imgs[i].addEventListener('load',r);imgs[i].addEventListener('error',r)}window.addEventListener('message',function(e){var d=e.data;if(d&&d.type==='xbf-scroll-to'){var el=document.getElementById(d.id);if(el){el.scrollIntoView({behavior:'smooth',block:'start'})}}});setTimeout(r,300);setTimeout(r,1000);setTimeout(r,2500)})();<\/script>`;
 
 const BASE_TAG = '<base target="_blank">';
 
-// 精准修复：只重置 html/body 的视口高度相关属性（100vh/100vmax 等），
-// 不动任何子元素布局（不设 flex:none / height:auto），确保内容完整展示。
+// 只重置 html/body 的视口高度相关属性（100vh/100vmax 等），
+// 不动任何子元素布局，确保内容完整展示。
 // 注入到 </body> 前以最高优先级覆盖内容自带的样式。
 const HEIGHT_RESET = `<style>
 html,body{
