@@ -11,6 +11,7 @@ export interface ArticleCardItem {
   viewCount: number;
   likeCount: number;
   publishAt: string | Date | null;
+  updatedAt: string | Date | null;
   category?: { id: string; name: string; slug: string };
 }
 
@@ -24,6 +25,11 @@ function chipColor(key: string) {
 
 export default function ArticleCard({ a }: { a: ArticleCardItem }) {
   const date = a.publishAt ? new Date(a.publishAt).toLocaleDateString('zh-CN') : '';
+  const updated = a.updatedAt
+    ? new Date(a.updatedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : '';
+  // 当更新时间与发布时间不同天时才显示"更新于"
+  const showUpdated = updated && (!date || updated !== date);
   const catColor = a.category ? chipColor(a.category.name) : 'bg-sunny';
 
   return (
@@ -58,7 +64,10 @@ export default function ArticleCard({ a }: { a: ArticleCardItem }) {
         <div className="flex items-center gap-4 text-xs text-ink/45 mt-3 font-semibold">
           <span className="inline-flex items-center gap-1"><Eye size={14} />{a.viewCount}</span>
           <span className="inline-flex items-center gap-1"><Heart size={14} />{a.likeCount}</span>
-          {date && <span className="ml-auto">{date}</span>}
+          <span className="ml-auto text-right">
+            {date}
+            {showUpdated && <span className="ml-1.5 text-ink/35">更新于 {updated}</span>}
+          </span>
         </div>
       </div>
     </Link>

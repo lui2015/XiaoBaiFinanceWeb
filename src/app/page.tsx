@@ -54,7 +54,7 @@ export default async function HomePage({
   const toCard = (a: any): ArticleCardItem => ({
     id: String(a.id), title: a.title, slug: a.slug, summary: a.summary,
     coverUrl: a.coverUrl, viewCount: a.viewCount, likeCount: a.likeCount,
-    publishAt: a.createdAt, // 按上传时间排序展示
+    publishAt: a.createdAt, updatedAt: a.updatedAt,
     category: a.category ? { id: String(a.category.id), name: a.category.name, slug: a.category.slug } : undefined,
   });
 
