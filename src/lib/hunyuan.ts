@@ -44,7 +44,7 @@ export async function callHunyuan(options: HunyuanOptions): Promise<HunyuanRespo
     throw new Error('HUNYUAN_API_KEY 环境变量未配置');
   }
 
-  const { messages, model = 'deepseek-v4-pro-202606', temperature = 0.7, maxTokens = 8192 } = options;
+  const { messages, model = 'deepseek-v4-pro-202606', temperature = 0.7, maxTokens = 16384 } = options;
 
   const res = await fetch(HUNYUAN_API, {
     method: 'POST',

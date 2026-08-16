@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
         { role: 'user', content: userMessage },
       ],
       temperature: 0.8,
-      maxTokens: 8192,
+      maxTokens: 16384,
     });
 
     const rawContent = res.choices[0].message.content;
