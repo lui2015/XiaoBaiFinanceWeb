@@ -122,7 +122,8 @@ const DEFAULT_CATEGORY_ID = '1';
 
 export async function POST(req: NextRequest) {
   return apiHandler(async () => {
-    await requireManager();
+    const u = await requireManager();
+    const managerId = Number(u.id);
     const body = schema.parse(await req.json().catch(() => ({})));
 
     // 确定主题
@@ -177,7 +178,7 @@ export async function POST(req: NextRequest) {
         categoryId,
         status: 1, // AI 生成的直接发布
         publishAt: new Date(),
-        createdBy: 'ai:hunyuan',
+        createdBy: managerId,
       },
     });
 
