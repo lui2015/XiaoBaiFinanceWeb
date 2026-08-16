@@ -159,69 +159,6 @@ function CategoryManager({ cats, reload }: { cats: Cat[]; reload: () => Promise<
           </div>
         ))}
       </div>
-
-      {/* AI 创建弹窗 */}
-      {showAiModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => !aiCreating && setShowAiModal(false)}>
-          <div
-            className="bg-white rounded-3xl border-4 border-ink shadow-xl w-full max-w-md p-6 relative"
-            onClick={e => e.stopPropagation()}
-          >
-            <h2 className="text-xl font-bold text-ink mb-1">🤖 AI 智能创建</h2>
-            <p className="text-sm text-ink/50 mb-5">调用混元大模型 + 小白财经 Skill，一键生成科普漫画文章</p>
-
-            {/* 模式选择 */}
-            <div className="flex gap-3 mb-4">
-              {([
-                { k: 'auto' as const, label: '🎲 自动选题', desc: '系统随机选择热门财经概念' },
-                { k: 'custom' as const, label: '✏️ 自定义主题', desc: '输入你想科普的主题' },
-              ]).map(opt => (
-                <button key={opt.k}
-                  onClick={() => setAiMode(opt.k)}
-                  disabled={aiCreating}
-                  className={`flex-1 rounded-2xl border-2 p-3 text-left transition-all ${aiMode === opt.k ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}
-                >
-                  <div className="font-bold text-sm">{opt.label}</div>
-                  <div className="text-xs text-ink/45 mt-0.5">{opt.desc}</div>
-                </button>
-              ))}
-            </div>
-
-            {/* 主题输入 */}
-            {aiMode === 'custom' && (
-              <input
-                value={aiTopic}
-                onChange={e => setAiTopic(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && aiCreateArticle()}
-                placeholder="例如：量比、MACD、市盈率、换手率…"
-                maxLength={50}
-                disabled={aiCreating}
-                autoFocus
-                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 text-sm focus:border-purple-400 focus:outline-none transition-colors"
-              />
-            )}
-
-            {/* 进度提示 */}
-            {aiProgress && (
-              <div className="mt-3 px-3 py-2 bg-purple-50 rounded-lg text-sm text-purple-700 animate-pulse">
-                {aiProgress}
-              </div>
-            )}
-
-            {/* 按钮 */}
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => setShowAiModal(false)} disabled={aiCreating}
-                className="flex-1 px-4 py-2.5 rounded-full border-2 border-gray-200 font-bold text-sm text-ink/60 hover:bg-gray-50 transition-colors">取消</button>
-              <button onClick={aiCreateArticle} disabled={aiCreating || (aiMode === 'custom' && !aiTopic.trim())}
-                className="flex-1 px-4 py-2.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-sm hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 transition-all">
-                {aiCreating ? '⏳ 生成中…' : '🚀 开始创建'}
-              </button>
-            </div>
-
-            <p className="text-xs text-ink/30 mt-3 text-center">AI 生成约需 15~30 秒，请耐心等待</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -687,6 +624,69 @@ function ArticleList({ cats, onSaved }: { cats: Cat[]; onSaved: () => void }) {
           <span className="text-ink/60">第 {page} / {totalPages} 页 · 共 {total} 条</span>
           <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             className="px-3 py-1.5 rounded-full border-2 border-ink disabled:opacity-40">下一页</button>
+        </div>
+      )}
+
+      {/* AI 创建弹窗 */}
+      {showAiModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => !aiCreating && setShowAiModal(false)}>
+          <div
+            className="bg-white rounded-3xl border-4 border-ink shadow-xl w-full max-w-md p-6 relative"
+            onClick={e => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold text-ink mb-1">🤖 AI 智能创建</h2>
+            <p className="text-sm text-ink/50 mb-5">调用混元大模型 + 小白财经 Skill，一键生成科普漫画文章</p>
+
+            {/* 模式选择 */}
+            <div className="flex gap-3 mb-4">
+              {([
+                { k: 'auto' as const, label: '🎲 自动选题', desc: '系统随机选择热门财经概念' },
+                { k: 'custom' as const, label: '✏️ 自定义主题', desc: '输入你想科普的主题' },
+              ]).map(opt => (
+                <button key={opt.k}
+                  onClick={() => setAiMode(opt.k)}
+                  disabled={aiCreating}
+                  className={`flex-1 rounded-2xl border-2 p-3 text-left transition-all ${aiMode === opt.k ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}
+                >
+                  <div className="font-bold text-sm">{opt.label}</div>
+                  <div className="text-xs text-ink/45 mt-0.5">{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* 主题输入 */}
+            {aiMode === 'custom' && (
+              <input
+                value={aiTopic}
+                onChange={e => setAiTopic(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && aiCreateArticle()}
+                placeholder="例如：量比、MACD、市盈率、换手率…"
+                maxLength={50}
+                disabled={aiCreating}
+                autoFocus
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 text-sm focus:border-purple-400 focus:outline-none transition-colors"
+              />
+            )}
+
+            {/* 进度提示 */}
+            {aiProgress && (
+              <div className="mt-3 px-3 py-2 bg-purple-50 rounded-lg text-sm text-purple-700 animate-pulse">
+                {aiProgress}
+              </div>
+            )}
+
+            {/* 按钮 */}
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setShowAiModal(false)} disabled={aiCreating}
+                className="flex-1 px-4 py-2.5 rounded-full border-2 border-gray-200 font-bold text-sm text-ink/60 hover:bg-gray-50 transition-colors">取消</button>
+              <button onClick={aiCreateArticle} disabled={aiCreating || (aiMode === 'custom' && !aiTopic.trim())}
+                className="flex-1 px-4 py-2.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-sm hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 transition-all">
+                {aiCreating ? '⏳ 生成中…' : '🚀 开始创建'}
+              </button>
+            </div>
+
+            <p className="text-xs text-ink/30 mt-3 text-center">AI 生成约需 15~30 秒，请耐心等待</p>
+          </div>
         </div>
       )}
     </div>
