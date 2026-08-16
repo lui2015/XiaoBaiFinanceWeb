@@ -18,6 +18,8 @@ RUN sed -i 's|dl-cdn.alpinelinux.org|mirrors.tencent.com|g' /etc/apk/repositorie
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# 构建阶段设置默认 DATABASE_URL（SQLite），运行时由 env_file 覆盖
+ENV DATABASE_URL="file:./dev.db"
 RUN npx prisma generate
 RUN npm run build
 
