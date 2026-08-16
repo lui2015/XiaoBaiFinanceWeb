@@ -8,6 +8,8 @@ services:
     image: xiaobai-finance-web:latest
     container_name: xb_app
     restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
     env_file:
       - .env.production
     ports:

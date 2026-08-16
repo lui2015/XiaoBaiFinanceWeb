@@ -23,20 +23,30 @@ function chipColor(key: string) {
   return CHIP_COLORS[h % CHIP_COLORS.length];
 }
 
-/** 将任意时间戳转为北京时间显示 */
-function toBeijing(d: string | Date | null): Date | null {
-  if (!d) return null;
+const TZ = 'Asia/Shanghai';
+
+/** 按北京时区格式化日期（yyyy/M/d） */
+function fmtDate(d: string | Date | null): string {
+  if (!d) return '';
   const t = new Date(d);
-  // 如果是纯日期字符串（无时分秒），补成当天中午避免偏移问题
-  if (!isNaN(t.getTime())) return new Date(t.getTime() + 8 * 60 * 60 * 1000);
-  return null;
+  if (isNaN(t.getTime())) return '';
+  return t.toLocaleDateString('zh-CN', { timeZone: TZ });
+}
+
+/** 按北京时区格式化日期时间（M/d HH:mm） */
+function fmtDateTime(d: string | Date | null): string {
+  if (!d) return '';
+  const t = new Date(d);
+  if (isNaN(t.getTime())) return '';
+  return t.toLocaleString('zh-CN', {
+    timeZone: TZ,
+    month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
 }
 
 export default function ArticleCard({ a }: { a: ArticleCardItem }) {
-  const date = toBeijing(a.publishAt)?.toLocaleDateString('zh-CN') ?? '';
-  const updated = toBeijing(a.updatedAt)
-    ?.toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-    ?? '';
+  const date = fmtDate(a.publishAt);
+  const updated = fmtDateTime(a.updatedAt);
   // 当更新时间与发布时间不同天时才显示"更新于"
   const showUpdated = updated && (!date || updated !== date);
   const catColor = a.category ? chipColor(a.category.name) : 'bg-sunny';

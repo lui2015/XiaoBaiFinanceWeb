@@ -265,9 +265,7 @@ export async function POST(req: NextRequest) {
     const summary = text.slice(0, 120);
     const categoryId = Number(body.categoryId || DEFAULT_CATEGORY_ID);
 
-    // 创建文章记录（publishAt 使用北京时间 UTC+8）
-    const now = new Date();
-    const beijingTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    // 创建文章记录（时间统一存 UTC，展示层按 Asia/Shanghai 格式化）
     const article = await prisma.article.create({
       data: {
         title,
@@ -278,7 +276,7 @@ export async function POST(req: NextRequest) {
         contentText: text,
         categoryId,
         status: 1, // AI 生成的直接发布
-        publishAt: beijingTime,
+        publishAt: new Date(),
         createdBy: managerId,
       },
     });

@@ -85,7 +85,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           )}
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-4">
-          <span>{a.publishAt ? new Date(a.publishAt).toLocaleString('zh-CN') : ''}</span>
+          <span>{a.publishAt ? new Date(a.publishAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : ''}</span>
           <span>· 阅读 {a.viewCount}</span>
           <span>· 收藏 {a.favoriteCount}</span>
           <span>· 点赞 {a.likeCount}</span>

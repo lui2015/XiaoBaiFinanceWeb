@@ -72,7 +72,7 @@ export default async function SearchPage({
                     dangerouslySetInnerHTML={{ __html: h.highlight?.content || h.summary }} />
                 )}
                 <div className="text-xs text-gray-400 mt-2">
-                  {h.publishAt ? new Date(h.publishAt).toLocaleDateString('zh-CN') : ''}
+                  {h.publishAt ? new Date(h.publishAt).toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' }) : ''}
                 </div>
               </Link>
             ))}

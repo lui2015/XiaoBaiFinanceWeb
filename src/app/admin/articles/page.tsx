@@ -72,7 +72,7 @@ export default async function ArticleListPage({
                   {a.scheduledAt && <span className="ml-2 text-xs text-brand-500">已定时</span>}
                 </td>
                 <td className="p-3 text-right text-xs">{a.viewCount} / {a.likeCount} / {a.favoriteCount}</td>
-                <td className="p-3 text-xs text-gray-500">{a.publishAt ? new Date(a.publishAt).toLocaleString('zh-CN') : '-'}</td>
+                <td className="p-3 text-xs text-gray-500">{a.publishAt ? new Date(a.publishAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : '-'}</td>
                 <td className="p-3 text-right">
                   <ArticleListActions id={String(a.id)} status={a.status} slug={a.slug} />
                 </td>
