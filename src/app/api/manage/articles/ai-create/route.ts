@@ -31,18 +31,27 @@ function pickAutoTopic(): string {
 // ==================== System Prompt（基于 SKILL.md） ====================
 const SYSTEM_PROMPT = `你是一位专业的财经科普漫画内容生成器，代号「小白学财经」。
 
-## 角色设定
-- **小白（🐷 猪八戒）**：投资新手，自称"俺老猪"，爱问问题、口语化。常用句式："师傅~ XX 是啥玩意儿嘛？"、"俺老猪听不太懂"、"那XX是不是越大越好？"
-- **师傅（🙏 唐僧）**：资深股民/佛系导师，自称"为师"/"师傅"。常用句式："阿弥陀佛~ 悟能莫急"、"善哉善哉！徒儿天资聪颖！"、"不可执念！"
+## 角色设定（严格遵循视觉规范）
+- **小白（猪八戒形象）**：
+  - 外貌：粉红色圆脸、大耳朵、小眼睛、笑眯眯的表情
+  - 性格：投资新手，憨厚可爱、爱问问题
+  - 口语风格：自称"俺老猪"，句式如"师傅~ XX 是啥玩意儿嘛？"、"俺老猪听不太懂"、"那XX是不是越大越好？"
+  - 气泡颜色：**暖黄色背景 #fffbeb**，橙色边框 #f59e0b
+- **师傅（唐僧形象）**：
+  - 外貌：慈祥面容、光头（有佛珠）、温和眼神
+  - 性格：资深股民/佛系导师，沉稳睿智
+  - 口语风格：自称"为师"/"师傅"，句式如"阿弥陀佛~ 悟能莫急"、"善哉善哉！徒儿天资聪颖！"、"不可执念！"
+  - 气泡颜色：**淡蓝色背景 #eff6ff**，蓝色边框 #2563eb
 
 ## 输出要求
 请根据用户给出的财经概念主题，生成一份完整的**单文件 HTML 漫画**。
 
 ### HTML 结构规范（必须严格遵守）
-1. **DOCTYPE + html head body** 完整结构
+1. **DOCTYPE + html head body** 完整结构，charset=utf-8
 2. **内联所有 CSS**（写在 <style> 标签内），不依赖外部资源
-3. **5 个章节**（section），每章包含：
-   - 章节标题（<h3>）
+3. **viewport meta**：<meta name="viewport" content="width=device-width, initial-scale=1">
+4. **5 个章节**（<section>），每章包含：
+   - 章节标题（<h2> 带编号）
    - 至少 1 轮对话（小白提问 + 师傅解答）
    - 至少 1 个可视化组件（表格/公式框/流程图/笔记框等）
 
@@ -53,20 +62,33 @@ const SYSTEM_PROMPT = `你是一位专业的财经科普漫画内容生成器，
 4. **怎么用** — 实战决策方法 + 操作建议
 5. **风险点 & 口诀** — 局限性总结 + 朗朗上口的速记口诀
 
-### 视觉样式要求
-- 主色调：蓝色科技风（#1e3a8a / #2563eb / #3b82f6）
-- 关键术语用 <span class="highlight"> 高亮（黄色背景 #fef08a）
-- 对话气泡：小白黄底(#fffbeb)、师傅蓝底(#eff6ff)
-- 包含数据表格(.data-table)、公式框(.formula)、笔记框(.note-box)、风险提示框(.risk-box)、口诀框(.mnemonic-box)等组件
-- 底部必须有免责声明：「⚠️ 本内容仅供学习交流，不构成任何投资建议」
+### 视觉样式要求（重要！必须严格遵守）
+- **整体布局**：max-width: 800px; margin: 0 auto; padding: 20px; background: #f8fafc;
+- **主色调**：蓝色科技风（#1e3a8a / #2563eb / #3b82f6）
+- **对话气泡样式**（关键！）：
+  - 使用 flexbox 布局，左侧显示角色头像区域 + 右侧气泡
+  - 小白气泡：background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 12px;
+  - 师傅气泡：background: #eff6ff; border-left: 4px solid #2563eb; border-radius: 12px;
+  - 角色名标签：小白用橙色 #f59e0b，师傅用蓝色 #2563eb
+- **头像实现**：使用 CSS 绘制的圆形头像（不是emoji文字）：
+  - 小白：粉色圆形背景(#fbcfe8) + 猪耳朵CSS形状 + 简笔画表情(用CSS/SVG)
+  - 师傅：米色圆形背景(#fef3c7) + 佛珠装饰 + 慈祥表情(用CSS/SVG)
+- **高亮术语**：<span class="highlight"> 样式：background: #fef08a; padding: 2px 6px; border-radius: 4px;
+- **组件样式**：
+  - 数据表格(.data-table)：蓝色表头 + 斑马纹行
+  - 公式框(.formula)：深蓝渐变背景 + 白色文字 + 居中
+  - 笔记框(.note-box)：浅蓝背景 + 左侧蓝色边框
+  - 风险提示框(.risk-box)：浅红背景 + 红色警告图标
+  - 口诀框(.mnemonic-box)：深蓝渐变背景 + 橙色标题 + 白色文字
+- **底部免责声明**：「⚠️ 本内容仅供学习交流，不构成任何投资建议」（红色警示框）
 
 ### 对话节奏
 - 每段对话 ≤ 3 行（手机阅读友好）
 - 小白提问 → 师傅解答 → 小白追问/恍然大悟 → 师傅升华 → 进入下一章
 - 结尾有师傅金句或投资寄语
 
-### 同时输出卡片数据
-在完整的 HTML 结构结束之后，**另起一行**，严格按照如下标记输出 6 张卡片的渲染数据（用于生成抖音/小红书竖版图片）。务必使用这两个标记包裹 JSON，且 JSON 必须是合法可解析的：
+### 同时输出卡片数据（放在HTML之后）
+在完整的 HTML </html> 结束标签之后，**另起一行**，严格按照如下标记输出 6 张卡片的渲染数据：
 
 ===CARDS_JSON_START===
 {
@@ -187,8 +209,9 @@ export async function POST(req: NextRequest) {
     // 更新搜索索引
     try { await getSearch().upsertArticle(article.id); } catch { /* 不阻断 */ }
 
-    // 保存卡片数据（供后续图片生成使用）
+    // 保存卡片数据并尝试自动生成图片
     let cardDataSaved = false;
+    let cardsGenerated = false;
     if (cardJson && cardJson.cards) {
       try {
         const dataDir = path.join(process.cwd(), 'data', 'ai-cards');
@@ -196,6 +219,31 @@ export async function POST(req: NextRequest) {
         const cardPath = path.join(dataDir, `${article.id}.json`);
         await writeFile(cardPath, JSON.stringify(cardJson, null, 2), 'utf-8');
         cardDataSaved = true;
+
+        // 尝试自动生成卡片图片（需要 Python3 + Pillow，失败不阻断）
+        try {
+          const { execFile: ef } = await import('child_process');
+          const { promisify: p } = await import('util');
+          const execAsync = p(ef);
+          const outputDir = path.join(process.cwd(), 'public', 'uploads', 'cards', String(article.id));
+          await mkdir(outputDir, { recursive: true });
+          // 复用 generate-cards 的 Python 脚本构建逻辑
+          const { buildPythonScript } = await import('../generate-cards/route');
+          const pythonScript = buildPythonScript(cardJson.concept || topic, cardJson.cards, outputDir);
+          const scriptPath = path.join(dataDir, `_gen_${article.id}.py`);
+          await writeFile(scriptPath, pythonScript, 'utf-8');
+          const { stdout, stderr } = await execAsync('python3', [scriptPath], {
+            timeout: 120000,
+            cwd: process.cwd(),
+            env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+          });
+          console.log(`卡片图片生成完成: ${stdout.slice(-200)}`);
+          cardsGenerated = true;
+          // 清理临时脚本
+          try { const { unlink: ul } = await import('fs/promises'); await ul(scriptPath); } catch {}
+        } catch (genErr: any) {
+          console.warn(`[AI创建] 卡片图片生成跳过: ${genErr.code === 'ENOENT' ? '服务器未安装Python3' : genErr.message?.slice(0, 120)}`);
+        }
       } catch (e) {
         console.error('保存卡片数据失败:', e);
       }
@@ -207,6 +255,7 @@ export async function POST(req: NextRequest) {
       title: article.title,
       topic,
       cardsReady: cardDataSaved,
+      cardsGenerated,
       usage: res.usage,
     });
   });

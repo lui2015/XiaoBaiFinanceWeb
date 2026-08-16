@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
  * 动态构建 Python 脚本来渲染卡片
  * 基于 XIAOBAI_FINANCE_SKILL 的 generate_cards.py，适配 Linux 环境
  */
-function buildPythonScript(
+export function buildPythonScript(
   concept: string,
   cards: any[],
   outputDir: string

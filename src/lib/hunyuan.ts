@@ -80,6 +80,8 @@ export async function callHunyuan(options: HunyuanOptions): Promise<HunyuanRespo
  */
 export function extractHtml(raw: string): string {
   let html = raw.trim();
+  // 去除 ===CARDS_JSON_START=== ... ===CARDS_JSON_END=== 标记（卡片数据不应出现在HTML中）
+  html = html.replace(/===CARDS_JSON_START===[\s\S]*?===CARDS_JSON_END===\s*/g, '').trim();
   // 去除 ```html ... ``` 包裹
   const codeBlockMatch = html.match(/```(?:html)?\s*\n?([\s\S]*?)\n?```/);
   if (codeBlockMatch) {
