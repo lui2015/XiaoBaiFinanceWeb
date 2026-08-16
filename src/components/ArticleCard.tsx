@@ -23,11 +23,20 @@ function chipColor(key: string) {
   return CHIP_COLORS[h % CHIP_COLORS.length];
 }
 
+/** 将任意时间戳转为北京时间显示 */
+function toBeijing(d: string | Date | null): Date | null {
+  if (!d) return null;
+  const t = new Date(d);
+  // 如果是纯日期字符串（无时分秒），补成当天中午避免偏移问题
+  if (!isNaN(t.getTime())) return new Date(t.getTime() + 8 * 60 * 60 * 1000);
+  return null;
+}
+
 export default function ArticleCard({ a }: { a: ArticleCardItem }) {
-  const date = a.publishAt ? new Date(a.publishAt).toLocaleDateString('zh-CN') : '';
-  const updated = a.updatedAt
-    ? new Date(a.updatedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-    : '';
+  const date = toBeijing(a.publishAt)?.toLocaleDateString('zh-CN') ?? '';
+  const updated = toBeijing(a.updatedAt)
+    ?.toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    ?? '';
   // 当更新时间与发布时间不同天时才显示"更新于"
   const showUpdated = updated && (!date || updated !== date);
   const catColor = a.category ? chipColor(a.category.name) : 'bg-sunny';
