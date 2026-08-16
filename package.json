@@ -20,14 +20,17 @@
     "scheduler": "tsx scripts/scheduler.ts"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
     "@elastic/elasticsearch": "^8.15.0",
+    "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "cookie": "^1.0.1",
+    "cos-nodejs-sdk-v5": "^2.13.10",
     "dompurify": "^3.2.0",
+    "dotenv": "^16.4.5",
     "jose": "^5.9.6",
     "jsdom": "^25.0.1",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.460.0",
     "marked": "^14.1.4",
     "next": "14.2.18",
@@ -37,8 +40,6 @@
     "sanitize-html": "^2.13.1",
     "shiki": "^1.24.0",
     "tencentcloud-sdk-nodejs-sms": "^4.0.1003",
-    "cos-nodejs-sdk-v5": "^2.13.10",
-    "dotenv": "^16.4.5",
     "ulid": "^2.3.0",
     "zod": "^3.23.8"
   },

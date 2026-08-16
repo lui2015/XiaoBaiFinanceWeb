@@ -159,6 +159,69 @@ function CategoryManager({ cats, reload }: { cats: Cat[]; reload: () => Promise<
           </div>
         ))}
       </div>
+
+      {/* AI 创建弹窗 */}
+      {showAiModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => !aiCreating && setShowAiModal(false)}>
+          <div
+            className="bg-white rounded-3xl border-4 border-ink shadow-xl w-full max-w-md p-6 relative"
+            onClick={e => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold text-ink mb-1">🤖 AI 智能创建</h2>
+            <p className="text-sm text-ink/50 mb-5">调用混元大模型 + 小白财经 Skill，一键生成科普漫画文章</p>
+
+            {/* 模式选择 */}
+            <div className="flex gap-3 mb-4">
+              {([
+                { k: 'auto' as const, label: '🎲 自动选题', desc: '系统随机选择热门财经概念' },
+                { k: 'custom' as const, label: '✏️ 自定义主题', desc: '输入你想科普的主题' },
+              ]).map(opt => (
+                <button key={opt.k}
+                  onClick={() => setAiMode(opt.k)}
+                  disabled={aiCreating}
+                  className={`flex-1 rounded-2xl border-2 p-3 text-left transition-all ${aiMode === opt.k ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}
+                >
+                  <div className="font-bold text-sm">{opt.label}</div>
+                  <div className="text-xs text-ink/45 mt-0.5">{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* 主题输入 */}
+            {aiMode === 'custom' && (
+              <input
+                value={aiTopic}
+                onChange={e => setAiTopic(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && aiCreateArticle()}
+                placeholder="例如：量比、MACD、市盈率、换手率…"
+                maxLength={50}
+                disabled={aiCreating}
+                autoFocus
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 text-sm focus:border-purple-400 focus:outline-none transition-colors"
+              />
+            )}
+
+            {/* 进度提示 */}
+            {aiProgress && (
+              <div className="mt-3 px-3 py-2 bg-purple-50 rounded-lg text-sm text-purple-700 animate-pulse">
+                {aiProgress}
+              </div>
+            )}
+
+            {/* 按钮 */}
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setShowAiModal(false)} disabled={aiCreating}
+                className="flex-1 px-4 py-2.5 rounded-full border-2 border-gray-200 font-bold text-sm text-ink/60 hover:bg-gray-50 transition-colors">取消</button>
+              <button onClick={aiCreateArticle} disabled={aiCreating || (aiMode === 'custom' && !aiTopic.trim())}
+                className="flex-1 px-4 py-2.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-sm hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 transition-all">
+                {aiCreating ? '⏳ 生成中…' : '🚀 开始创建'}
+              </button>
+            </div>
+
+            <p className="text-xs text-ink/30 mt-3 text-center">AI 生成约需 15~30 秒，请耐心等待</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -374,6 +437,13 @@ function ArticleList({ cats, onSaved }: { cats: Cat[]; onSaved: () => void }) {
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState('');
   const [showUpload, setShowUpload] = useState(false);
+  const [exportingAll, setExportingAll] = useState(false);
+  // AI 创建状态
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiMode, setAiMode] = useState<'custom' | 'auto'>('auto');
+  const [aiTopic, setAiTopic] = useState('');
+  const [aiCreating, setAiCreating] = useState(false);
+  const [aiProgress, setAiProgress] = useState('');
   const pageSize = 10;
 
   const load = useCallback(async () => {
@@ -443,6 +513,57 @@ function ArticleList({ cats, onSaved }: { cats: Cat[]; onSaved: () => void }) {
     }
   }
 
+  async function exportAllHtml() {
+    setExportingAll(true);
+    try {
+      const r = await apiFetch('/api/manage/articles/export-all');
+      const ct = r.headers.get('content-type') || '';
+      if (!r.ok || !ct.includes('application/zip')) {
+        const data = await r.json().catch(() => null);
+        toast(data?.message || '批量导出失败', 'error');
+        return;
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `xiaobai-finance-export-${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast(`已导出全部 ${total} 篇文章（ZIP）`, 'success');
+    } catch {
+      toast('批量导出失败，请重试', 'error');
+    } finally {
+      setExportingAll(false);
+    }
+  }
+
+  async function aiCreateArticle() {
+    if (aiMode === 'custom' && !aiTopic.trim()) { toast('请输入主题', 'error'); return; }
+    setAiCreating(true);
+    setAiProgress('正在调用 AI 生成内容…');
+    try {
+      const r = await apiFetch('/api/manage/articles/ai-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: aiMode, topic: aiTopic.trim() || undefined }),
+      });
+      const data = await r.json();
+      if (!r.ok) { toast(data.message || 'AI 创建失败', 'error'); return; }
+      toast(`AI 已创建「${data.title}」`, 'success');
+      setShowAiModal(false);
+      setAiTopic('');
+      load(); // 刷新列表
+    } catch (e: any) {
+      toast(e?.message || 'AI 创建失败，请重试', 'error');
+    } finally {
+      setAiCreating(false);
+      setAiProgress('');
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
@@ -453,6 +574,11 @@ function ArticleList({ cats, onSaved }: { cats: Cat[]; onSaved: () => void }) {
           onClick={() => setShowUpload(v => !v)}
           className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold border-2 border-ink transition-colors ${showUpload ? 'bg-coral/20 text-coral' : 'comic-btn bg-mint text-ink'}`}
         >{showUpload ? '收起新建' : '+ 新建内容'}</button>
+        <button
+          onClick={() => setShowAiModal(true)}
+          disabled={aiCreating}
+          className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold border-2 border-ink transition-colors ${aiCreating ? 'bg-purple-100 text-purple-600 animate-pulse' : 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 hover:from-purple-200 hover:to-pink-200'}`}
+        >{aiCreating ? '✨ AI 生成中…' : '🤖 AI 创建'}</button>
         <div className="flex-1 flex gap-2 w-full sm:w-auto">
           <input
             value={keyword}
@@ -472,6 +598,10 @@ function ArticleList({ cats, onSaved }: { cats: Cat[]; onSaved: () => void }) {
             <option value="2">已下架</option>
           </select>
           <button onClick={() => { setPage(1); load(); }} className="comic-btn bg-mint text-ink text-sm">搜索</button>
+          <button disabled={exportingAll} onClick={exportAllHtml}
+            className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold border-2 border-ink transition-colors ${exportingAll ? 'bg-ink/10 text-ink/50' : 'bg-sky-100 text-sky-700 hover:bg-sky-200'}`}>
+            {exportingAll ? '打包中…' : '📦 全部导出'}
+          </button>
         </div>
       </div>
 
