@@ -66,8 +66,9 @@ const SYSTEM_PROMPT = `你是一位专业的财经科普漫画内容生成器，
 - 结尾有师傅金句或投资寄语
 
 ### 同时输出卡片数据
-在 HTML 之后，用 \`\`\`json 代码块输出 6 张卡片的渲染数据（用于生成抖音/小红书竖版图片），格式如下：
-\`\`\`json
+在完整的 HTML 结构结束之后，**另起一行**，严格按照如下标记输出 6 张卡片的渲染数据（用于生成抖音/小红书竖版图片）。务必使用这两个标记包裹 JSON，且 JSON 必须是合法可解析的：
+
+===CARDS_JSON_START===
 {
   "concept": "概念名",
   "cards": [
@@ -75,7 +76,7 @@ const SYSTEM_PROMPT = `你是一位专业的财经科普漫画内容生成器，
     ...
   ]
 }
-\`\`\`
+===CARDS_JSON_END===
 
 卡片 block 类型说明：
 - ("dia", "left"/"right", "对话文字") — 对话气泡
@@ -90,7 +91,8 @@ const SYSTEM_PROMPT = `你是一位专业的财经科普漫画内容生成器，
 - ("keywords", ["词1","词2",...]) — 关键词云
 - ("hero", "大标题", "副标题") — 核心大卡
 
-前5张对应5个章节（对话+图表混排），第6张是纯图表总结卡（hero+timeline+keywords+mnemonic）。`;
+前5张对应5个章节（对话+图表混排），第6张是纯图表总结卡（hero+timeline+keywords+mnemonic）。
+注意：JSON 中不要使用 Python 元组语法，所有数据用合法 JSON（数组/对象/字符串）。`;
 
 const schema = z.object({
   mode: z.enum(['custom', 'auto']),

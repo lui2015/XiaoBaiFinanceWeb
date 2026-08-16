@@ -92,6 +92,11 @@ export function extractHtml(raw: string): string {
  * 从 LLM 响应中提取 JSON 数据（用于卡片生成数据）
  */
 export function extractJson<T>(raw: string): T | null {
+  // 优先匹配 ===CARDS_JSON_START=== ... ===CARDS_JSON_END=== 标记
+  const markerMatch = raw.match(/===CARDS_JSON_START===([\s\S]*?)===CARDS_JSON_END===/);
+  if (markerMatch) {
+    try { return JSON.parse(markerMatch[1].trim()); } catch { /* fall through */ }
+  }
   // 尝试匹配 ```json ... ```
   const jsonMatch = raw.match(/```json\s*\n?([\s\S]*?)\n?```/);
   if (jsonMatch) {
