@@ -1,6 +1,6 @@
 /**
- * 混元大模型（Hunyuan / hy3）API 客户端
- * 用于调用腾讯混元模型生成财经科普漫画内容
+ * 腾讯 MaaS 大模型（TokenHub）API 客户端
+ * 用于调用大模型生成财经科普漫画内容（当前默认 deepseek-v4-pro-202606）
  */
 
 const HUNYUAN_API = 'https://tokenhub.tencentmaas.com/v1/chat/completions';
@@ -44,7 +44,7 @@ export async function callHunyuan(options: HunyuanOptions): Promise<HunyuanRespo
     throw new Error('HUNYUAN_API_KEY 环境变量未配置');
   }
 
-  const { messages, model = 'hy3', temperature = 0.7, maxTokens = 8192 } = options;
+  const { messages, model = 'deepseek-v4-pro-202606', temperature = 0.7, maxTokens = 8192 } = options;
 
   const res = await fetch(HUNYUAN_API, {
     method: 'POST',
