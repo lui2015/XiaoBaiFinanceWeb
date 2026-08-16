@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { fail } from '@/lib/api';
 import { requireManager } from '@/lib/auth';
-import JSZip from 'jszip';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,7 +84,7 @@ export async function GET(_req: NextRequest) {
     // 查询所有已发布文章（含草稿也一并导出，让用户有完整备份）
     const articles = await prisma.article.findMany({
       where: { deletedAt: null },
-      orderBy: [{ category: { sortOrder: 'asc' }, { publishAt: 'desc', id: 'desc' }],
+      orderBy: { createdAt: 'desc' as any },
       include: {
         category: { select: { name: true } },
         subCategory: { select: { name: true } },
@@ -108,6 +107,7 @@ export async function GET(_req: NextRequest) {
       return NextResponse.json({ code: 404, message: '暂无内容可导出' }, { status: 404 });
     }
 
+    const JSZip = (await import('jszip')).default;
     const zip = new JSZip();
     for (const a of articles) {
       const filename = `${a.slug || String(a.id)}.html`;
