@@ -746,7 +746,9 @@ function OpenPlatform({ cats }: { cats: Cat[] }) {
 
   const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}/XiaoBaiFinance` : '';
   const endpoint = `${baseUrl}/api/open/articles`;
+  const docsUrl = `${baseUrl}/api/open/docs?doc=data`;
   const demoKey = keys[0]?.raw || '<YOUR_API_KEY>';
+  const dataCurl = `curl -s "${baseUrl}/api/open/v1/articles?page=1&size=10" -H "Authorization: Bearer ${demoKey}"`;
 
   /* ---- 提示词模板 ---- */
   const prompts = {
@@ -893,12 +895,36 @@ print(resp.json())`,
       <div className="bg-white border-2 border-ink rounded-2xl p-5 shadow-comic-sm">
         <h3 className="font-bold text-base mb-3">接口信息</h3>
         <div className="space-y-2 text-sm">
-          <div className="flex gap-2"><span className="shrink-0 text-ink/50 w-20">地址</span><code className="bg-cream px-2 py-0.5 rounded text-xs break-all">{endpoint}</code></div>
-          <div className="flex gap-2"><span className="shrink-0 text-ink/50 w-20">方法</span><code className="bg-sunny/30 px-2 py-0.5 rounded font-bold">POST</code></div>
+          <div className="flex gap-2"><span className="shrink-0 text-ink/50 w-20">基础地址</span><code className="bg-cream px-2 py-0.5 rounded text-xs break-all">{`${baseUrl}/api/open`}</code></div>
           <div className="flex gap-2"><span className="shrink-0 text-ink/50 w-20">认证</span><code>Authorization: Bearer &lt;API_KEY&gt;</code></div>
-          <div className="flex gap-2 items-start"><span className="shrink-0 text-ink/50 w-20 pt-0.5">测试</span>
-            <button onClick={() => copyText(prompts.curl, 'cURL 已复制')} className="text-xs px-2.5 py-1 rounded-full border border-ink/20 hover:bg-sky-100">复制 cURL 示例</button>
+          <div className="flex gap-2 items-start"><span className="shrink-0 text-ink/50 w-20 pt-0.5">文档</span>
+            <a href={docsUrl} target="_blank" rel="noreferrer" className="text-xs text-brand-500 underline break-all">{docsUrl}</a>
           </div>
+        </div>
+
+        <div className="mt-4 pt-3 border-t-2 border-ink/10">
+          <h4 className="text-xs font-bold text-ink/60 mb-2">接口列表</h4>
+          <div className="space-y-1.5 text-xs">
+            {[
+              { m: 'GET', p: '/api/open/v1', d: '能力索引（公开）' },
+              { m: 'GET', p: '/api/open/v1/articles', d: '文章列表（分页 / 筛选 / 搜索）' },
+              { m: 'GET', p: '/api/open/v1/articles/{idOrSlug}', d: '文章详情（含正文）' },
+              { m: 'GET', p: '/api/open/v1/categories', d: '分类树' },
+              { m: 'POST', p: '/api/open/articles', d: '投稿发布文章' },
+            ].map((x) => (
+              <div key={x.p} className="flex items-center gap-2">
+                <span className={`shrink-0 w-11 text-center font-bold rounded px-1 py-0.5 ${x.m === 'POST' ? 'bg-sunny/40' : 'bg-mint/40'}`}>{x.m}</span>
+                <code className="break-all">{x.p}</code>
+                <span className="text-ink/50 shrink-0 hidden sm:inline">{x.d}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4 flex gap-2 flex-wrap">
+          <button onClick={() => copyText(prompts.curl, 'cURL 已复制')} className="text-xs px-2.5 py-1 rounded-full border border-ink/20 hover:bg-sky-100">复制投稿 cURL 示例</button>
+          <button onClick={() => copyText(dataCurl, '数据接口 cURL 已复制')} className="text-xs px-2.5 py-1 rounded-full border border-ink/20 hover:bg-sky-100">复制数据接口 cURL 示例</button>
+          <button onClick={() => copyText(docsUrl, '文档地址已复制')} className="text-xs px-2.5 py-1 rounded-full border border-ink/20 hover:bg-sky-100">复制文档地址</button>
         </div>
       </div>
 

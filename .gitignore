@@ -12,6 +12,8 @@ dist
 .env.development
 
 uploads
+# 运行时生成：开放接口密钥文件与调用统计（含明文密钥，禁止提交）
+data/
 *.log
 coverage
 .vercel
