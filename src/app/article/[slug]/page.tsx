@@ -93,6 +93,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
 
         <ArticleClient
           articleId={String(a.id)}
+          articleSlug={a.slug}
           initialLiked={liked}
           initialFavorited={favorited}
           isLogin={!!user}

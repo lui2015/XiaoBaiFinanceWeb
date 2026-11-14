@@ -113,6 +113,7 @@ export async function GET() {
       dataEndpoints: [
         { method: 'GET', path: '/api/open/v1/articles', desc: '已发布文章列表（分页/筛选/搜索）' },
         { method: 'GET', path: '/api/open/v1/articles/{idOrSlug}', desc: '文章详情（含正文）' },
+        { method: 'GET', path: '/api/open/v1/articles/{idOrSlug}/image', desc: '文章分享图（SVG 图片）' },
         { method: 'GET', path: '/api/open/v1/categories', desc: '分类树' },
       ],
     },

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiHandler, jsonSafe, ApiErrors } from '@/lib/api';
 import { requireOpenApiKey, recordOpenCall } from '@/lib/open-auth';
+import { openImageUrl } from '@/lib/share-image';
 
 export const runtime = 'nodejs';
 
@@ -37,6 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: { idOrSlug: st
     return jsonSafe({
       article: { ...a, tags: a.tags.map((t) => t.tag) },
       url: `/XiaoBaiFinance/article/${a.slug}`,
+      imageUrl: openImageUrl(a.id),
     });
   });
 }

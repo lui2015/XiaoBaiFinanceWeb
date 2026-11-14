@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { apiHandler, jsonSafe } from '@/lib/api';
 import { requireOpenApiKey, recordOpenCall } from '@/lib/open-auth';
+import { openImageUrl } from '@/lib/share-image';
 import { parsePage } from '@/lib/utils';
 
 export const runtime = 'nodejs';
@@ -62,6 +63,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     await recordOpenCall(ctx);
-    return jsonSafe({ list, total, page, size, hasMore: page * size < total });
+    const withImage = list.map((x) => ({ ...x, imageUrl: openImageUrl(x.id) }));
+    return jsonSafe({ list: withImage, total, page, size, hasMore: page * size < total });
   });
 }

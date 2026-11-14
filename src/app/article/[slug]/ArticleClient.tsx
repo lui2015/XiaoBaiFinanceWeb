@@ -1,14 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Heart, Bookmark, MessageSquare, ArrowUp } from 'lucide-react';
+import { Heart, Bookmark, MessageSquare, ArrowUp, Download } from 'lucide-react';
 import { requireLogin } from '@/components/LoginPromptModal';
 import { toast } from '@/components/Toaster';
 import { apiFetch } from '@/lib/http';
 
 export default function ArticleClient({
-  articleId, initialLiked, initialFavorited, isLogin, children,
+  articleId, articleSlug, initialLiked, initialFavorited, isLogin, children,
 }: {
   articleId: string;
+  articleSlug: string;
   initialLiked: boolean;
   initialFavorited: boolean;
   isLogin: boolean;
@@ -17,6 +18,7 @@ export default function ArticleClient({
   const [liked, setLiked] = useState(initialLiked);
   const [favorited, setFavorited] = useState(initialFavorited);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // 阅读量上报
   useEffect(() => {
@@ -46,6 +48,30 @@ export default function ArticleClient({
     else toast('操作失败', 'error');
   }
 
+  /** 调服务端分享图接口拿 SVG，浏览器内转 PNG 后下载；不支持时降级下载 SVG */
+  async function exportImage() {
+    if (exporting) return;
+    setExporting(true);
+    let svg = '';
+    try {
+      const r = await apiFetch(`/api/articles/${articleId}/image`);
+      if (!r.ok) throw new Error('image request failed');
+      svg = await r.text();
+      const blob = await svgToPng(svg);
+      downloadBlob(blob, `${articleSlug || articleId}.png`);
+      toast('图片已导出', 'success');
+    } catch {
+      if (svg) {
+        downloadBlob(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }), `${articleSlug || articleId}.svg`);
+        toast('已导出 SVG 图片', 'success');
+      } else {
+        toast('导出失败，请稍后再试', 'error');
+      }
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <>
       {children}
@@ -60,6 +86,10 @@ export default function ArticleClient({
         <button onClick={() => isLogin ? setShowFeedback(true) : requireLogin()}
           className="flex items-center gap-1 px-4 py-2 rounded-full border bg-white border-gray-200 hover:border-brand-200">
           <MessageSquare size={16} /> 反馈
+        </button>
+        <button onClick={exportImage} disabled={exporting}
+          className="flex items-center gap-1 px-4 py-2 rounded-full border bg-white border-gray-200 hover:border-brand-200 disabled:opacity-50">
+          <Download size={16} /> {exporting ? '导出中…' : '导出为图片'}
         </button>
       </div>
 
@@ -135,4 +165,37 @@ function BackToTop() {
       <ArrowUp size={18} />
     </button>
   );
+}
+
+/** 把服务端返回的 SVG 在浏览器内绘制成 PNG，尺寸取 SVG 固有值 */
+function svgToPng(svg: string): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const svgUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || 1080;
+      canvas.height = img.naturalHeight || 1440;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { URL.revokeObjectURL(svgUrl); reject(new Error('canvas unavailable')); return; }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        URL.revokeObjectURL(svgUrl);
+        blob ? resolve(blob) : reject(new Error('toBlob failed'));
+      }, 'image/png');
+    };
+    img.onerror = () => { URL.revokeObjectURL(svgUrl); reject(new Error('svg load failed')); };
+    img.src = svgUrl;
+  });
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

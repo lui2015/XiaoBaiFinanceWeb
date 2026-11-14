@@ -909,6 +909,7 @@ print(resp.json())`,
               { m: 'GET', p: '/api/open/v1', d: '能力索引（公开）' },
               { m: 'GET', p: '/api/open/v1/articles', d: '文章列表（分页 / 筛选 / 搜索）' },
               { m: 'GET', p: '/api/open/v1/articles/{idOrSlug}', d: '文章详情（含正文）' },
+              { m: 'GET', p: '/api/open/v1/articles/{idOrSlug}/image', d: '文章分享图（SVG 图片）' },
               { m: 'GET', p: '/api/open/v1/categories', d: '分类树' },
               { m: 'POST', p: '/api/open/articles', d: '投稿发布文章' },
             ].map((x) => (

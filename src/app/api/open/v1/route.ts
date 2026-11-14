@@ -19,6 +19,7 @@ export async function GET() {
         { method: 'GET', path: '/api/open/docs?doc=data', auth: false, desc: '完整接口文档（Markdown）' },
         { method: 'GET', path: '/api/open/v1/articles', auth: true, desc: '已发布文章列表，支持分页/分类/关键词/排序' },
         { method: 'GET', path: '/api/open/v1/articles/{idOrSlug}', auth: true, desc: '文章详情，含正文与标签' },
+        { method: 'GET', path: '/api/open/v1/articles/{idOrSlug}/image', auth: true, desc: '文章分享图（1080×1440 SVG 图片）' },
         { method: 'GET', path: '/api/open/v1/categories', auth: true, desc: '分类树（含 slug，供投稿选择分类）' },
         { method: 'POST', path: '/api/open/articles', auth: true, desc: '投稿发布文章' },
       ],
