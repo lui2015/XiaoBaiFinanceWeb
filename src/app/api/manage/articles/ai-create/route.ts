@@ -7,8 +7,9 @@ import { sanitizeRichHtml, htmlToText } from '@/lib/sanitize';
 import { slugify } from '@/lib/utils';
 import { getSearch } from '@/lib/search';
 import { callHunyuan, extractHtml, extractJson } from '@/lib/hunyuan';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, rm } from 'fs/promises';
 import path from 'path';
+import os from 'os';
 
 export const dynamic = 'force-dynamic';
 
@@ -296,28 +297,39 @@ export async function POST(req: NextRequest) {
         cardDataSaved = true;
 
         // 尝试自动生成卡片图片（需要 Python3 + Pillow，失败不阻断）
+        // 生成到临时目录后统一上传 COS，不再写 public/uploads
+        const outputDir = path.join(os.tmpdir(), `xb-cards-${article.id}-${Date.now()}`);
+        let scriptPath = '';
         try {
           const { execFile: ef } = await import('child_process');
           const { promisify: p } = await import('util');
           const execAsync = p(ef);
-          const outputDir = path.join(process.cwd(), 'public', 'uploads', 'cards', String(article.id));
+          const { uploadLocalFile } = await import('@/lib/storage');
+          const { readdir, unlink } = await import('fs/promises');
           await mkdir(outputDir, { recursive: true });
           // 复用 generate-cards 的 Python 脚本构建逻辑
           const { buildPythonScript } = await import('../generate-cards/route');
           const pythonScript = buildPythonScript(cardJson.concept || topic, cardJson.cards, outputDir);
-          const scriptPath = path.join(dataDir, `_gen_${article.id}.py`);
+          scriptPath = path.join(os.tmpdir(), `_gen_${article.id}_${Date.now()}.py`);
           await writeFile(scriptPath, pythonScript, 'utf-8');
-          const { stdout, stderr } = await execAsync('python3', [scriptPath], {
+          const { stdout } = await execAsync('python3', [scriptPath], {
             timeout: 120000,
             cwd: process.cwd(),
             env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
           });
-          console.log(`卡片图片生成完成: ${stdout.slice(-200)}`);
-          cardsGenerated = true;
-          // 清理临时脚本
-          try { const { unlink: ul } = await import('fs/promises'); await ul(scriptPath); } catch {}
+          const uploaded = await Promise.all(
+            (await readdir(outputDir))
+              .filter(f => f.endsWith('.png'))
+              .map(f => uploadLocalFile(`cards/${article.id}/${f}`, path.join(outputDir, f), 'image/png')),
+          );
+          console.log(`卡片图片生成完成并上传存储: ${uploaded.length} 张; ${stdout.slice(-120)}`);
+          cardsGenerated = uploaded.length > 0;
+          try { await unlink(scriptPath); } catch {}
         } catch (genErr: any) {
           console.warn(`[AI创建] 卡片图片生成跳过: ${genErr.code === 'ENOENT' ? '服务器未安装Python3' : genErr.message?.slice(0, 120)}`);
+        } finally {
+          if (scriptPath) { try { await rm(scriptPath, { force: true }); } catch {} }
+          try { await rm(outputDir, { recursive: true, force: true }); } catch {}
         }
       } catch (e) {
         console.error('保存卡片数据失败:', e);

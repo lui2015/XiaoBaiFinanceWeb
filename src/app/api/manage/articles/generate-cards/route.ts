@@ -6,7 +6,9 @@ import { requireManager } from '@/lib/auth';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
-import { readFile, writeFile, mkdir, access, unlink } from 'fs/promises';
+import os from 'os';
+import { readFile, writeFile, mkdir, access, unlink, rm } from 'fs/promises';
+import { uploadLocalFile } from '@/lib/storage';
 
 const execFileAsync = promisify(execFile);
 
@@ -50,13 +52,13 @@ export async function POST(req: NextRequest) {
       throw new Error('卡片数据格式无效');
     }
 
-    // 确保输出目录存在
-    const outputDir = path.join(process.cwd(), 'public', 'uploads', 'cards', articleId);
+    // 生成到系统临时目录，随后统一上传到 COS（不再写 public/uploads）
+    const outputDir = path.join(os.tmpdir(), `xb-cards-${articleId}-${Date.now()}`);
     await mkdir(outputDir, { recursive: true });
 
     // 生成 Python 脚本并执行
     const concept = cardData.concept || article.title;
-    const scriptPath = path.join(dataDir, `_gen_${articleId}.py`);
+    const scriptPath = path.join(os.tmpdir(), `_gen_${articleId}_${Date.now()}.py`);
     const pythonScript = buildPythonScript(concept, cardData.cards, outputDir);
 
     await writeFile(scriptPath, pythonScript, 'utf-8');
@@ -77,6 +79,7 @@ export async function POST(req: NextRequest) {
       const files = fs.readdirSync(outputDir).filter((f: string) => f.endsWith('.png'));
 
       if (files.length === 0) {
+        try { await rm(outputDir, { recursive: true, force: true }); } catch { /* ignore */ }
         return jsonSafe({
           success: false,
           error: '未生成图片文件',
@@ -85,22 +88,34 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      // 统一上传到对象存储（COS），返回可直接访问的 URL
+      const uploaded = await Promise.all(
+        files.map(async (f: string) => {
+          const key = `cards/${articleId}/${f}`;
+          return uploadLocalFile(key, path.join(outputDir, f), 'image/png');
+        }),
+      );
+
       // 更新文章封面为第一张卡片图
-      const coverUrl = `/uploads/cards/${articleId}/${files[0]}`;
+      const coverUrl = uploaded[0].url;
       await prisma.article.update({
         where: { id: BigInt(articleId) },
         data: { coverUrl },
       });
 
+      // 清理临时生成目录
+      try { await rm(outputDir, { recursive: true, force: true }); } catch { /* ignore */ }
+
       return jsonSafe({
         success: true,
-        count: files.length,
-        files: files.map(f => `/uploads/cards/${articleId}/${f}`),
+        count: uploaded.length,
+        files: uploaded.map(u => u.url),
         coverUrl,
       });
     } catch (execErr: any) {
-      // 清理临时脚本
+      // 清理临时脚本与临时目录
       try { await unlink(scriptPath); } catch { /* ignore */ }
+      try { await rm(outputDir, { recursive: true, force: true }); } catch { /* ignore */ }
 
       // Python 不可用时的友好错误
       if (execErr.code === 'ENOENT') {
