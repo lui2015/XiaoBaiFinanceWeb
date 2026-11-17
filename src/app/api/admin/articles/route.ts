@@ -7,6 +7,7 @@ import { sanitizeHtmlContent, markdownToSanitizedHtml, htmlToText } from '@/lib/
 import { Reg, parsePage, slugify, getClientIp } from '@/lib/utils';
 import { writeOpLog } from '@/lib/op-log';
 import { getSearch } from '@/lib/search';
+import { syncArticleDoc } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -94,6 +95,8 @@ export async function POST(req: NextRequest) {
       });
     }
     if (a.status === 1) await getSearch().upsertArticle(a.id);
+    // 正文文档同步到 COS（失败不阻断保存）
+    try { await syncArticleDoc(a.id, html, body.sourceType === 1 ? body.contentMd : null); } catch { /* no-op */ }
     await writeOpLog({ adminId: admin.id, action: 'article.create', targetType: 'article', targetId: a.id, ip: getClientIp(req) });
     return jsonSafe({ id: String(a.id), slug: a.slug });
   });

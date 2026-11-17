@@ -6,6 +6,7 @@ import { sanitizeRichHtml, markdownToSanitizedHtml, htmlToText } from '@/lib/san
 import { slugify } from '@/lib/utils';
 import { getSearch } from '@/lib/search';
 import { requireOpenApiKey, recordOpenCall } from '@/lib/open-auth';
+import { syncArticleDoc } from '@/lib/storage';
 
 const schema = z.object({
   title: z.string().min(2).max(60),
@@ -68,6 +69,8 @@ export async function POST(req: NextRequest) {
     if (a.status === 1) {
       try { await getSearch().upsertArticle(a.id); } catch { /* no-op */ }
     }
+    // 正文文档同步到 COS（失败不阻断投稿）
+    try { await syncArticleDoc(a.id, html, body.sourceType === 1 ? body.contentMd : null); } catch { /* no-op */ }
     await recordOpenCall(ctx);
     return NextResponse.json({ code: 0, data: { id: String(a.id), slug: a.slug }, message: 'ok' });
   } catch (e: any) {

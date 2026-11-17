@@ -6,6 +6,7 @@ import { requireManager } from '@/lib/auth';
 import { sanitizeRichHtml, htmlToText } from '@/lib/sanitize';
 import { slugify } from '@/lib/utils';
 import { getSearch } from '@/lib/search';
+import { syncArticleDoc } from '@/lib/storage';
 import { callHunyuan, extractHtml, extractJson } from '@/lib/hunyuan';
 import { writeFile, mkdir, rm } from 'fs/promises';
 import path from 'path';
@@ -284,6 +285,9 @@ export async function POST(req: NextRequest) {
 
     // 更新搜索索引
     try { await getSearch().upsertArticle(article.id); } catch { /* 不阻断 */ }
+
+    // 正文文档同步到 COS（失败不阻断）
+    try { await syncArticleDoc(article.id, sanitizedHtml); } catch { /* no-op */ }
 
     // 保存卡片数据并尝试自动生成图片
     let cardDataSaved = false;

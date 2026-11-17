@@ -148,6 +148,30 @@ export async function uploadLocalFile(key: string, filePath: string, contentType
   return getStorage().put(key, body, contentType);
 }
 
+/**
+ * 把文章正文文档同步到对象存储。
+ * key 使用 html/{id}.html（存储层自动加 xiaobai/ 前缀，与历史迁移数据一致）。
+ * 失败不抛出，避免影响主流程写库/响应；调用方可按需忽略。
+ */
+export async function syncArticleDoc(
+  articleId: number | bigint | string,
+  html: string,
+  md?: string | null,
+): Promise<UploadResult | null> {
+  try {
+    const id = String(articleId);
+    const r = await getStorage().put(`html/${id}.html`, Buffer.from(html || '', 'utf-8'), 'text/html; charset=utf-8');
+    if (md) {
+      try {
+        await getStorage().put(`html/${id}.md`, Buffer.from(md, 'utf-8'), 'text/markdown; charset=utf-8');
+      } catch { /* md 为可选副本，失败不影响 html */ }
+    }
+    return r;
+  } catch {
+    return null;
+  }
+}
+
 /** 文件类型/魔数校验 */
 export const FileMagics: Record<string, string[]> = {
   'image/jpeg': ['ffd8ff'],

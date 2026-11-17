@@ -6,6 +6,7 @@ import { requireManager } from '@/lib/auth';
 import { sanitizeRichHtml, markdownToSanitizedHtml, htmlToText } from '@/lib/sanitize';
 import { slugify } from '@/lib/utils';
 import { getSearch } from '@/lib/search';
+import { syncArticleDoc } from '@/lib/storage';
 
 const schema = z.object({
   title: z.string().min(2).max(60),
@@ -98,6 +99,8 @@ export async function POST(req: NextRequest) {
     if (a.status === 1) {
       try { await getSearch().upsertArticle(a.id); } catch { /* 搜索索引失败不阻断发布 */ }
     }
+    // 正文文档同步到 COS（失败不阻断保存）
+    try { await syncArticleDoc(a.id, html, body.sourceType === 1 ? body.contentMd : null); } catch { /* no-op */ }
     return jsonSafe({ id: String(a.id), slug: a.slug });
   });
 }

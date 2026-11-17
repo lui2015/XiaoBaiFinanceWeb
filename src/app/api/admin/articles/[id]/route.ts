@@ -7,6 +7,7 @@ import { sanitizeHtmlContent, markdownToSanitizedHtml, htmlToText } from '@/lib/
 import { writeOpLog } from '@/lib/op-log';
 import { getClientIp } from '@/lib/utils';
 import { getSearch } from '@/lib/search';
+import { syncArticleDoc } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -65,6 +66,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       data.contentMd = body.sourceType === 1 ? body.contentMd : null;
     }
     const a = await prisma.article.update({ where: { id }, data });
+    // 正文文档同步到 COS（仅在本次修改了正文时；失败不阻断保存）
+    if (body.sourceType !== undefined) {
+      try { await syncArticleDoc(a.id, data.contentHtml || a.contentHtml, data.contentMd ?? a.contentMd); } catch { /* no-op */ }
+    }
     if (a.status === 1) await getSearch().upsertArticle(a.id);
     await writeOpLog({ adminId: admin.id, action: 'article.update', targetType: 'article', targetId: id, ip: getClientIp(req) });
     return jsonSafe({ ok: true });

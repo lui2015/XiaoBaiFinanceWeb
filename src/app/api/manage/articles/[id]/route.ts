@@ -5,6 +5,7 @@ import { apiHandler, ApiErrors, jsonSafe } from '@/lib/api';
 import { requireManager } from '@/lib/auth';
 import { sanitizeRichHtml, markdownToSanitizedHtml, htmlToText } from '@/lib/sanitize';
 import { getSearch } from '@/lib/search';
+import { syncArticleDoc } from '@/lib/storage';
 
 const updateSchema = z.object({
   title: z.string().min(2).max(60).optional(),
@@ -69,6 +70,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const a = await prisma.article.update({ where: { id }, data });
+    // 正文文档同步到 COS（仅在本次修改了正文时；失败不阻断保存）
+    if (body.sourceType !== undefined) {
+      try { await syncArticleDoc(a.id, data.contentHtml || a.contentHtml, data.contentMd ?? a.contentMd); } catch { /* no-op */ }
+    }
     try {
       if (a.status === 1) await getSearch().upsertArticle(a.id);
       else await getSearch().removeArticle(a.id);
