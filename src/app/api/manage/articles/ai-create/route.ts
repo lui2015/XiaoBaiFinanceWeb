@@ -7,6 +7,7 @@ import { sanitizeRichHtml, htmlToText } from '@/lib/sanitize';
 import { slugify } from '@/lib/utils';
 import { getSearch } from '@/lib/search';
 import { syncArticleDoc } from '@/lib/storage';
+import { AVATAR_DEFS, ensureAvatarDefs } from '@/lib/avatar-defs';
 import { callHunyuan, extractHtml, extractJson } from '@/lib/hunyuan';
 import { writeFile, mkdir, rm } from 'fs/promises';
 import path from 'path';
@@ -30,33 +31,6 @@ function pickAutoTopic(): string {
   return AUTO_TOPICS[Math.floor(Math.random() * AUTO_TOPICS.length)];
 }
 
-// ==================== 头像 SVG 符号（与参考文章一致的矢量头像） ====================
-const AVATAR_DEFS = `<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="zhu-bajie" viewBox="0 0 120 120">
-    <ellipse cx="18" cy="52" rx="13" ry="20" fill="#f9a8d4"/>
-    <ellipse cx="102" cy="52" rx="13" ry="20" fill="#f9a8d4"/>
-    <circle cx="60" cy="62" r="44" fill="#fbcfe8"/>
-    <ellipse cx="60" cy="82" rx="26" ry="19" fill="#f9a8d4"/>
-    <circle cx="51" cy="82" r="4.5" fill="#db2777"/>
-    <circle cx="69" cy="82" r="4.5" fill="#db2777"/>
-    <circle cx="45" cy="52" r="7" fill="#ffffff"/><circle cx="45" cy="52" r="3.5" fill="#1f2937"/>
-    <circle cx="75" cy="52" r="7" fill="#ffffff"/><circle cx="75" cy="52" r="3.5" fill="#1f2937"/>
-    <path d="M48 96 Q60 104 72 96" stroke="#db2777" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-    <path d="M28 40 Q60 16 92 40 Q60 34 28 40" fill="#c4b5fd"/>
-  </symbol>
-  <symbol id="tang-seng" viewBox="0 0 120 120">
-    <circle cx="60" cy="56" r="40" fill="#fde9d3"/>
-    <ellipse cx="50" cy="44" rx="9" ry="6" fill="#ffffff" opacity="0.55"/>
-    <path d="M40 50 Q48 46 56 50" stroke="#92400e" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-    <path d="M64 50 Q72 46 80 50" stroke="#92400e" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-    <circle cx="48" cy="58" r="4.5" fill="#1f2937"/>
-    <circle cx="72" cy="58" r="4.5" fill="#1f2937"/>
-    <path d="M50 72 Q60 80 70 72" stroke="#92400e" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-    <g fill="#fbbf24" stroke="#d97706" stroke-width="1">
-      <circle cx="44" cy="96" r="5"/><circle cx="58" cy="101" r="5"/><circle cx="72" cy="101" r="5"/><circle cx="86" cy="96" r="5"/>
-    </g>
-  </symbol>
-</svg>`;
 
 // ==================== 视觉模板 CSS（与参考文章「标准化合约」完全一致） ====================
 const TEMPLATE_CSS = `<style>
@@ -257,8 +231,8 @@ export async function POST(req: NextRequest) {
       throw new Error('AI 未返回有效的 HTML 内容');
     }
 
-    // 净化并存储 HTML
-    const sanitizedHtml = sanitizeRichHtml(rawHtml);
+    // 净化并存储 HTML；强制补齐头像 symbol 定义（AI 可能漏写导致头像空白）
+    const sanitizedHtml = ensureAvatarDefs(sanitizeRichHtml(rawHtml));
     const text = htmlToText(sanitizedHtml);
     if (!text.trim()) throw new Error('AI 生成的内容为空');
 
